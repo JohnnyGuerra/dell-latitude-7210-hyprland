@@ -1,0 +1,13 @@
+[Unit]
+Description=Hardware Folio Aware Auto Rotation & Scratchpad Resizer
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/auto-rotate-daemon.py
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+if ! command -v tailscale &>/dev/null; then
+    exit 0
+fi
+
+STATUS=$(tailscale status --json 2>/dev/null)
+BACKEND_STATE=$(echo "$STATUS" | grep -Po '"BackendState":\s*"\K[^"]*')
+
+if [ "$BACKEND_STATE" = "Running" ]; then
+    SELF_IP=$(tailscale ip -4 2>/dev/null)
+    ONLINE_PEERS=$(tailscale status 2>/dev/null | grep -v "$SELF_IP" | grep -i "active" | awk '{print $2}' | paste -sd ", " -)
+    ONLINE_PEERS=${ONLINE_PEERS:-"No active peers"}
+    
+    TOOLTIP="Tailscale: Connected ($SELF_IP)\nActive peers: $ONLINE_PEERS"
+    printf '{"text": "󰖂 ", "tooltip": "%s", "class": "connected"}\n' "$TOOLTIP"
+else
+    printf '{"text": "󰖂 ", "tooltip": "Tailscale: Disconnected", "class": "disconnected"}\n'
+fi

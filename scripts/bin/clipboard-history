@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Clipboard History Fuzzy Search with Wofi
+
+# If wofi is already running, toggle off
+if pidof wofi >/dev/null 2>&1; then
+    killall wofi 2>/dev/null
+    exit 0
+fi
+
+SELECTION=$(cliphist list | wofi --dmenu --prompt "📋 Clipboard History" --lines 10 --width 650 --hide-scroll)
+
+if [ -n "$SELECTION" ]; then
+    echo "$SELECTION" | cliphist decode | wl-copy
+    notify-send -t 2000 "Clipboard" "Copied item to clipboard"
+fi

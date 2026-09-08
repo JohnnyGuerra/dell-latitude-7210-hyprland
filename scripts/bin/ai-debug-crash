@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+export PATH="$HOME/.local/bin:$PATH"
+# ai-debug-crash: Gathers recent crash core dumps and opens an agy agent to diagnose
+
+LOG_TMP="/tmp/crash-debug-$$.log"
+
+echo "=== Gathering recent system errors and core dumps ===" > "$LOG_TMP"
+echo "--- coredumpctl info ---" >> "$LOG_TMP"
+coredumpctl info 2>/dev/null | tail -n 50 >> "$LOG_TMP"
+echo "" >> "$LOG_TMP"
+echo "--- Recent journalctl error logs ---" >> "$LOG_TMP"
+journalctl -p 3 -xb --no-pager 2>/dev/null | tail -n 40 >> "$LOG_TMP"
+
+PROMPT="Please analyze the following crash logs from my Arch Linux system, explain the root cause, and suggest how to fix or prevent it:"
+
+if command -v herdr &>/dev/null; then
+    herdr new -s "crash-debug" "cat $LOG_TMP; echo ''; agy '$PROMPT'"
+    kitty --class agent-terminal -e herdr attach "crash-debug"
+else
+    kitty --class agent-terminal -e bash -c "cat '$LOG_TMP'; echo ''; agy '$PROMPT'; exec bash"
+fi

@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+export PATH="$HOME/.local/bin:$PATH"
+
+AI_SERVER="100.76.44.71"
+USER="ubuntu"
+SESSION="agy-vps"
+
+if command -v hyprctl &>/dev/null; then
+    SIG=$(ls /run/user/1000/hypr 2>/dev/null | head -n 1)
+    if [ -n "$SIG" ]; then
+        export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+    fi
+fi
+
+unset HERDR_ENV HERDR_SESSION HERDR_SOCKET_PATH HERDR_WORKSPACE_ID HERDR_TAB_ID HERDR_PANE_ID
+
+if ping -c 1 -W 1 "$AI_SERVER" &>/dev/null; then
+    exec kitty --class agent-terminal --title "AI Agent (ai-server)" \
+        -o remember_window_size=no -o initial_window_width=1420 -o initial_window_height=896 \
+        -e herdr --remote "$USER@$AI_SERVER" --session "$SESSION"
+else
+    exec kitty --class agent-terminal --title "AI Agent (local-offline)" \
+        -o remember_window_size=no -o initial_window_width=1420 -o initial_window_height=896 \
+        -e herdr --session agy-main
+fi

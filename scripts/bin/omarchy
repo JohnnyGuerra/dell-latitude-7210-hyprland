@@ -1,0 +1,160 @@
+#!/usr/bin/env bash
+# ==========================================================
+# Omarchy Master CLI (Lightweight & Power-Optimized)
+# ==========================================================
+
+show_help() {
+    cat << 'HELP'
+󰣇 Omarchy Linux Assistant
+
+Usage: omarchy <command> [arguments]
+
+Commands:
+  menu                  Launch the graphical Omarchy Control Hub (Super + Alt + Space)
+  theme [name]          Switch desktop theme (tokyo-night, catppuccin, rose-pine,
+                        giants, gruvbox, everforest, nord, kanagawa)
+  pkg <action>          Manage packages:
+                          omarchy pkg install <pkg...>
+                          omarchy pkg remove <pkg...>
+                          omarchy pkg search <query>
+                          omarchy pkg update
+                          omarchy pkg clean
+  webapp <action>       Manage isolated web applications:
+                          omarchy webapp add <name> <url> [icon-url-or-path]
+                          omarchy webapp list
+                          omarchy webapp remove <name>
+  doctor                Run system power, battery, and hardware diagnostics
+  update                Run full system update (Pacman + AUR)
+  clean                 Remove orphaned packages and clean pacman cache
+  help                  Show this help message
+
+HELP
+}
+
+CMD="$1"
+shift || true
+
+case "$CMD" in
+    menu)
+        exec ~/.local/bin/omarchy-menu "$@"
+        ;;
+    theme)
+        exec ~/.local/bin/omarchy-theme "$@"
+        ;;
+    pkg)
+        ACTION="$1"
+        shift || true
+        case "$ACTION" in
+            install|add)
+                yay -S --needed "$@"
+                ;;
+            remove|drop|rm)
+                yay -Rns "$@"
+                ;;
+            search|find)
+                yay -Ss "$@"
+                ;;
+            update|upgrade)
+                yay -Syu
+                ;;
+            clean)
+                echo "Removing orphaned packages and cleaning cache..."
+                yay -Sc --noconfirm
+                sudo pacman -Rns $(pacman -Qtdq) 2>/dev/null || echo "No orphaned packages found."
+                ;;
+            *)
+                echo "Usage: omarchy pkg [install|remove|search|update|clean] [package...]"
+                ;;
+        esac
+        ;;
+    webapp)
+        ACTION="$1"
+        shift || true
+        WEBAPPS_DIR="$HOME/.local/share/applications"
+        mkdir -p "$WEBAPPS_DIR"
+        case "$ACTION" in
+            add)
+                NAME="$1"
+                URL="$2"
+                ICON="${3:-web-browser}"
+                if [ -z "$NAME" ] || [ -z "$URL" ]; then
+                    echo "Usage: omarchy webapp add <name> <url> [icon]"
+                    exit 1
+                fi
+                DESKTOP_FILE="$WEBAPPS_DIR/omarchy-webapp-${NAME,,}.desktop"
+                cat << WAPP > "$DESKTOP_FILE"
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=$NAME
+Comment=Omarchy Web App - $NAME
+Exec=google-chrome-stable --ozone-platform-hint=auto --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoDecoder,TouchpadOverscrollHistoryNavigation --enable-gpu-rasterization --enable-zero-copy --app=$URL
+Icon=$ICON
+Terminal=false
+StartupNotify=true
+Categories=Network;WebBrowser;
+WAPP
+                chmod +x "$DESKTOP_FILE"
+                echo "Web app '$NAME' created at: $DESKTOP_FILE"
+                echo "Accessible via App Launcher (Super + D)."
+                ;;
+            list)
+                echo "Installed Omarchy Web Apps:"
+                ls -1 "$WEBAPPS_DIR"/omarchy-webapp-*.desktop 2>/dev/null | sed 's|.*/omarchy-webapp-||;s|\.desktop||' || echo "No web apps installed."
+                ;;
+            remove|rm)
+                NAME="$1"
+                if [ -z "$NAME" ]; then
+                    echo "Usage: omarchy webapp remove <name>"
+                    exit 1
+                fi
+                rm -f "$WEBAPPS_DIR/omarchy-webapp-${NAME,,}.desktop"
+                echo "Removed web app '$NAME'."
+                ;;
+            *)
+                echo "Usage: omarchy webapp [add <name> <url> [icon]|list|remove <name>]"
+                ;;
+        esac
+        ;;
+    doctor|status)
+        echo "========================================="
+        echo " 󰣇 Omarchy System & Power Diagnostics"
+        echo "========================================="
+        echo "Active Theme: $(cat ~/.config/omarchy/current_theme 2>/dev/null || echo 'tokyo-night')"
+        echo "Display Scale: 1.33 (1920x1280)"
+        echo -n "Screen Refresh Rate: "
+        hyprctl monitors 2>/dev/null | grep "refreshRate" || echo "60Hz"
+        echo ""
+        echo "--- Battery & Power Management ---"
+        if command -v upower >/dev/null; then
+            BAT_DEV=$(upower -e | grep BAT | head -n 1)
+            if [ -n "$BAT_DEV" ]; then
+                upower -i "$BAT_DEV" | grep -E "(state|percentage|energy-rate|time to)"
+            fi
+        fi
+        echo -n "Sleep Mode: "
+        cat /sys/power/mem_sleep 2>/dev/null || echo "Unknown"
+        echo -n "PCIe ASPM Policy: "
+        cat /sys/module/pcie_aspm/parameters/policy 2>/dev/null || echo "Unknown"
+        echo ""
+        echo "--- Thermal & Background Daemons ---"
+        systemctl is-active thermald 2>/dev/null | sed 's/^/thermald: /'
+        systemctl is-active tailscaled 2>/dev/null | sed 's/^/tailscale: /'
+        echo "========================================="
+        ;;
+    update)
+        yay -Syu
+        ;;
+    clean)
+        yay -Sc --noconfirm
+        sudo pacman -Rns $(pacman -Qtdq) 2>/dev/null || echo "No orphaned packages found."
+        ;;
+    help|--help|-h|"")
+        show_help
+        ;;
+    *)
+        echo "Unknown command: $CMD"
+        show_help
+        exit 1
+        ;;
+esac

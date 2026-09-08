@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Dynamic Orientation-Aware On-Screen Keyboard & AI Scratchpad Resizer
+
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)}"
+SIG=$(ls -t "$XDG_RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
+[ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+
+if pgrep -f wvkbd-deskintl >/dev/null 2>&1; then
+    killall -9 wvkbd-deskintl 2>/dev/null
+    ~/.local/bin/fit-agent-window &
+else
+    wvkbd-deskintl \
+        -L 300 \
+        -H 380 \
+        -R 12 \
+        --alpha 165 \
+        --bg 1e1e2e \
+        --fg 313244 \
+        --fg-sp 45475a \
+        --text cdd6f4 \
+        --text-sp cba6f7 \
+        --press cba6f7 \
+        --text-press 1e1e2e \
+        &
+    sleep 0.1
+    ~/.local/bin/fit-agent-window &
+fi

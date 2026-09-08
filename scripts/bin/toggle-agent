@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+export PATH="$HOME/.local/bin:$PATH"
+
+if command -v hyprctl &>/dev/null; then
+    SIG=$(ls -t /run/user/1000/hypr 2>/dev/null | head -n 1)
+    if [ -n "$SIG" ]; then
+        export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+    fi
+fi
+
+hyprctl dispatch 'hl.dsp.workspace.toggle_special("agent")' 2>/dev/null || hyprctl dispatch togglespecialworkspace agent

@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# High-Performance, Unbreakable YouTube Music Player (yt-dlp + fzf + mpv)
+export PATH="$HOME/.local/bin:$PATH"
+
+QUERY="$*"
+
+if [ -z "$QUERY" ]; then
+    printf "\033[1;35m🎵 Enter YouTube Music Search:\033[0m "
+    read -r QUERY
+fi
+
+if [ -z "$QUERY" ]; then
+    exit 0
+fi
+
+echo "🔍 Searching YouTube Music for: $QUERY..."
+
+# Fetch top 15 results via yt-dlp flat playlist extraction
+RESULTS=$(yt-dlp --flat-playlist --default-search "ytsearch15" --print "%(title)s | %(uploader)s [%(duration_string)s]@@@%(id)s" "$QUERY" 2>/dev/null)
+
+if [ -z "$RESULTS" ]; then
+    echo "❌ No results found."
+    read -n 1 -s -r -p "Press any key to exit..."
+    exit 1
+fi
+
+# Let user fuzzy search and multi-select (TAB) in fzf
+SELECTED=$(echo "$RESULTS" | fzf \
+    --delimiter="@@@" \
+    --with-nth=1 \
+    --multi \
+    --header="[ENTER]: Play | [TAB]: Multi-Queue | [ESC]: Cancel" \
+    --prompt="🎶 Select Track > " \
+    --layout=reverse \
+    --border)
+
+if [ -z "$SELECTED" ]; then
+    exit 0
+fi
+
+# Extract YouTube IDs and feed to mpv
+URLS=()
+while IFS= read -r line; do
+    id="${line##*@@@}"
+    if [ -n "$id" ] && [ "$id" != "$line" ]; then
+        URLS+=("https://www.youtube.com/watch?v=$id")
+    fi
+done <<< "$SELECTED"
+
+if [ ${#URLS[@]} -eq 0 ]; then
+    echo "❌ No valid video ID selected."
+    exit 1
+fi
+
+echo "▶ Playing ${#URLS[@]} track(s) in background via mpv..."
+pkill -f "mpv.*youtube.com" 2>/dev/null || true
+
+nohup mpv --no-video \
+    --ytdl-format="bestaudio[ext=m4a]/bestaudio/best" \
+    --input-ipc-server=/tmp/mpvsocket \
+    --title="YouTube Music" \
+    "${URLS[@]}" > /tmp/ytm-mpv.log 2>&1 &
+
+echo "✨ Streaming started in background! (Control with media keys or playerctl)"
+sleep 1.2

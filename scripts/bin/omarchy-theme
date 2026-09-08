@@ -1,0 +1,453 @@
+#!/usr/bin/env bash
+# ==========================================================
+# Omarchy Multi-Theme Switcher
+# Supports: tokyo-night, catppuccin, rose-pine, giants,
+#           gruvbox, everforest, nord, kanagawa
+# ==========================================================
+
+THEME="$1"
+
+# If no theme argument provided, show Wofi interactive menu
+if [ -z "$THEME" ]; then
+    SELECTION=$(printf "1. Tokyo Night\n2. Catppuccin Mocha\n3. Rose Pine\n4. Giants (DHH Sepia)\n5. Gruvbox Dark\n6. Everforest\n7. Nord\n8. Kanagawa" | wofi --dmenu --prompt "Select Omarchy Theme...")
+    case "$SELECTION" in
+        *"Tokyo"*) THEME="tokyo-night" ;;
+        *"Catppuccin"*) THEME="catppuccin" ;;
+        *"Rose"*) THEME="rose-pine" ;;
+        *"Giants"*) THEME="giants" ;;
+        *"Gruvbox"*) THEME="gruvbox" ;;
+        *"Everforest"*) THEME="everforest" ;;
+        *"Nord"*) THEME="nord" ;;
+        *"Kanagawa"*) THEME="kanagawa" ;;
+        *) exit 0 ;;
+    esac
+fi
+
+WALLPAPERS_DIR="$HOME/.local/share/wallpapers"
+
+case "$THEME" in
+    tokyo-night|tokyo)
+        THEME_NAME="Tokyo Night"
+        BG="#1a1b26"
+        BG_RGB="26, 27, 38"
+        BG_ALT="#24283b"
+        BG_ALT_RGB="36, 40, 59"
+        FG="#c0caf5"
+        BORDER_ACT1="rgba(7aa2f7ee)"
+        BORDER_ACT2="rgba(bb9af7ee)"
+        BORDER_INACT="rgba(24283baa)"
+        ACCENT="#7aa2f7"
+        ACCENT_SEC="#bb9af7"
+        WALLPAPER="$WALLPAPERS_DIR/tokyo-night.png"
+        ;;
+    catppuccin|catppuccin-mocha|mocha)
+        THEME_NAME="Catppuccin Mocha"
+        BG="#1e1e2e"
+        BG_RGB="30, 30, 46"
+        BG_ALT="#313244"
+        BG_ALT_RGB="49, 50, 68"
+        FG="#cdd6f4"
+        BORDER_ACT1="rgba(cba6f7ee)"
+        BORDER_ACT2="rgba(89b4faee)"
+        BORDER_INACT="rgba(495068aa)"
+        ACCENT="#cba6f7"
+        ACCENT_SEC="#89b4fa"
+        WALLPAPER="$WALLPAPERS_DIR/catppuccin.png"
+        ;;
+    rose-pine|rose)
+        THEME_NAME="Rose Pine"
+        BG="#191724"
+        BG_RGB="25, 23, 36"
+        BG_ALT="#26233a"
+        BG_ALT_RGB="38, 35, 58"
+        FG="#e0def4"
+        BORDER_ACT1="rgba(eb6f92ee)"
+        BORDER_ACT2="rgba(9ccfd8ee)"
+        BORDER_INACT="rgba(383558aa)"
+        ACCENT="#eb6f92"
+        ACCENT_SEC="#9ccfd8"
+        WALLPAPER="$WALLPAPERS_DIR/rose-pine.png"
+        ;;
+    giants|sepia)
+        THEME_NAME="Giants"
+        BG="#1c1917"
+        BG_RGB="28, 25, 23"
+        BG_ALT="#292524"
+        BG_ALT_RGB="41, 37, 36"
+        FG="#f5f5f4"
+        BORDER_ACT1="rgba(f97316ee)"
+        BORDER_ACT2="rgba(eab308ee)"
+        BORDER_INACT="rgba(413736aa)"
+        ACCENT="#f97316"
+        ACCENT_SEC="#eab308"
+        WALLPAPER="$WALLPAPERS_DIR/giants.png"
+        ;;
+    gruvbox|gruvbox-dark)
+        THEME_NAME="Gruvbox Dark"
+        BG="#282828"
+        BG_RGB="40, 40, 40"
+        BG_ALT="#3c3836"
+        BG_ALT_RGB="60, 56, 54"
+        FG="#ebdbb2"
+        BORDER_ACT1="rgba(fabd2fee)"
+        BORDER_ACT2="rgba(fe8019ee)"
+        BORDER_INACT="rgba(3c3836aa)"
+        ACCENT="#fabd2f"
+        ACCENT_SEC="#fe8019"
+        WALLPAPER="$WALLPAPERS_DIR/gruvbox.png"
+        ;;
+    everforest|everforest-dark)
+        THEME_NAME="Everforest"
+        BG="#2d353b"
+        BG_RGB="45, 53, 59"
+        BG_ALT="#374247"
+        BG_ALT_RGB="55, 66, 71"
+        FG="#d3c6aa"
+        BORDER_ACT1="rgba(a7c080ee)"
+        BORDER_ACT2="rgba(7fbbb3ee)"
+        BORDER_INACT="rgba(374247aa)"
+        ACCENT="#a7c080"
+        ACCENT_SEC="#7fbbb3"
+        WALLPAPER="$WALLPAPERS_DIR/everforest.png"
+        ;;
+    nord|nord-dark)
+        THEME_NAME="Nord"
+        BG="#2e3440"
+        BG_RGB="46, 52, 64"
+        BG_ALT="#3b4252"
+        BG_ALT_RGB="59, 66, 82"
+        FG="#d8dee9"
+        BORDER_ACT1="rgba(88c0d0ee)"
+        BORDER_ACT2="rgba(81a1c1ee)"
+        BORDER_INACT="rgba(3b4252aa)"
+        ACCENT="#88c0d0"
+        ACCENT_SEC="#81a1c1"
+        WALLPAPER="$WALLPAPERS_DIR/nord.png"
+        ;;
+    kanagawa|kanagawa-wave)
+        THEME_NAME="Kanagawa"
+        BG="#1f1f28"
+        BG_RGB="31, 31, 40"
+        BG_ALT="#2a2a37"
+        BG_ALT_RGB="42, 42, 55"
+        FG="#dcd7ba"
+        BORDER_ACT1="rgba(7e9cd8ee)"
+        BORDER_ACT2="rgba(957fb8ee)"
+        BORDER_INACT="rgba(2a2a37aa)"
+        ACCENT="#7e9cd8"
+        ACCENT_SEC="#957fb8"
+        WALLPAPER="$WALLPAPERS_DIR/kanagawa.png"
+        ;;
+    *)
+        echo "Unknown theme: $THEME"
+        echo "Available themes: tokyo-night, catppuccin, rose-pine, giants, gruvbox, everforest, nord, kanagawa"
+        exit 1
+        ;;
+esac
+
+echo "Applying $THEME_NAME theme..."
+
+# 1. Update Hyprland border in hyprland.lua & hyprland.conf and reload
+if [ -f ~/.config/hypr/hyprland.lua ]; then
+    sed -i "s|active_border   = .*|active_border   = { colors = {\"$BORDER_ACT1\", \"$BORDER_ACT2\"}, angle = 45 },|" ~/.config/hypr/hyprland.lua
+    sed -i "s|inactive_border = .*|inactive_border = \"$BORDER_INACT\",|" ~/.config/hypr/hyprland.lua
+fi
+if [ -f ~/.config/hypr/hyprland.conf ]; then
+    sed -i "s|col.active_border = .*|col.active_border = $BORDER_ACT1 $BORDER_ACT2 45deg|" ~/.config/hypr/hyprland.conf
+    sed -i "s|col.inactive_border = .*|col.inactive_border = $BORDER_INACT|" ~/.config/hypr/hyprland.conf
+fi
+hyprctl reload 2>/dev/null || true
+
+# 2. Update Kitty Terminal Config
+cat <<KEOF > ~/.config/kitty/kitty.conf
+# Omarchy Kitty Configuration - $THEME_NAME
+font_family      JetBrainsMono Nerd Font
+bold_font        auto
+italic_font      auto
+bold_italic_font auto
+font_size        12.0
+
+window_padding_width 14
+window_padding_height 12
+remember_window_size  yes
+initial_window_width  900
+initial_window_height 560
+confirm_os_window_close 0
+
+cursor_shape beam
+cursor_blink_interval 0.5
+scrollback_lines 5000
+mouse_hide_wait 3.0
+
+background $BG
+foreground $FG
+selection_background $BG_ALT
+selection_foreground $FG
+cursor $FG
+cursor_text_color $BG
+active_border_color $ACCENT
+inactive_border_color $BG_ALT
+background_opacity 0.94
+
+# Standard Keybindings
+map ctrl+shift+c copy_to_clipboard
+map ctrl+shift+v paste_from_clipboard
+map ctrl+shift+plus change_font_size all +1.0
+map ctrl+shift+minus change_font_size all -1.0
+map ctrl+shift+backspace change_font_size all 0
+KEOF
+killall -SIGUSR1 kitty 2>/dev/null || true
+
+# 3. Update Waybar CSS
+cat <<WEOF > ~/.config/waybar/style.css
+* {
+    font-family: "JetBrainsMono Nerd Font", "FontAwesome", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    min-height: 0;
+}
+
+window#waybar {
+    background-color: rgba($BG_RGB, 0.85);
+    border: 1px solid $ACCENT;
+    border-radius: 12px;
+    color: $FG;
+    transition-property: background-color;
+    transition-duration: .3s;
+}
+
+window#waybar.hidden {
+    opacity: 0.2;
+}
+
+#workspaces {
+    background-color: rgba($BG_ALT_RGB, 0.7);
+    margin: 4px 6px;
+    border-radius: 8px;
+    padding: 2px 4px;
+}
+
+#workspaces button {
+    padding: 0 8px;
+    margin: 2px 2px;
+    border-radius: 6px;
+    background-color: transparent;
+    color: #787c99;
+    border: none;
+    transition: all 0.2s ease-in-out;
+}
+
+#workspaces button:hover {
+    background: rgba($BG_ALT_RGB, 0.9);
+    color: $FG;
+}
+
+#workspaces button.active {
+    background-color: $ACCENT;
+    color: $BG;
+    font-weight: bold;
+}
+
+#workspaces button.urgent {
+    background-color: #f7768e;
+    color: $BG;
+}
+
+#window {
+    color: $FG;
+    margin: 0 8px;
+    font-weight: 500;
+}
+
+#clock,
+#battery,
+#backlight,
+#network,
+#pulseaudio,
+#custom-agent,
+#tray {
+    padding: 3px 10px;
+    margin: 4px 3px;
+    border-radius: 8px;
+    background-color: rgba($BG_ALT_RGB, 0.7);
+    color: $FG;
+}
+
+#clock {
+    background-color: rgba($BG_ALT_RGB, 0.9);
+    color: $ACCENT_SEC;
+    font-weight: 600;
+}
+
+#custom-agent {
+    background: linear-gradient(135deg, $ACCENT 0%, $ACCENT_SEC 100%);
+    color: $BG;
+    font-weight: bold;
+    border-radius: 8px;
+}
+
+#pulseaudio {
+    color: #9ece6a;
+}
+
+#pulseaudio.muted {
+    color: #565f89;
+    background-color: rgba($BG_ALT_RGB, 0.4);
+}
+
+#backlight {
+    color: #e0af68;
+}
+
+#network {
+    color: $ACCENT;
+}
+
+#network.disconnected {
+    color: #f7768e;
+}
+
+#battery {
+    color: #9ece6a;
+}
+
+#battery.charging, #battery.plugged {
+    color: $ACCENT_SEC;
+}
+
+#battery.warning:not(.charging) {
+    color: #e0af68;
+}
+
+#battery.critical:not(.charging) {
+    background-color: #f7768e;
+    color: $BG;
+    animation-name: blink;
+    animation-duration: 0.5s;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+}
+
+@keyframes blink {
+    to {
+        background-color: rgba($BG_ALT_RGB, 0.7);
+        color: #f7768e;
+    }
+}
+
+#tray {
+    margin-right: 6px;
+}
+WEOF
+killall -SIGUSR2 waybar 2>/dev/null || (killall waybar 2>/dev/null; nohup waybar >/dev/null 2>&1 &)
+
+# 4. Update Wofi Style
+cat <<WOFEOF > ~/.config/wofi/style.css
+window {
+    margin: 0px;
+    background-color: rgba($BG_RGB, 0.95);
+    border: 2px solid $ACCENT;
+    border-radius: 12px;
+    font-family: "JetBrainsMono Nerd Font", sans-serif;
+    font-size: 14px;
+}
+
+#input {
+    margin: 12px;
+    padding: 8px 12px;
+    border: 1px solid $BG_ALT;
+    border-radius: 8px;
+    color: $FG;
+    background-color: $BG;
+    outline: none;
+}
+
+#input:focus {
+    border: 1px solid $ACCENT;
+}
+
+#inner-box {
+    margin: 6px 12px 12px 12px;
+    background-color: transparent;
+}
+
+#outer-box {
+    margin: 0px;
+    background-color: transparent;
+}
+
+#scroll {
+    margin: 0px;
+}
+
+#text {
+    margin: 5px;
+    color: $FG;
+}
+
+#entry {
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin: 2px 0px;
+    background-color: transparent;
+}
+
+#entry:selected {
+    background-color: $BG_ALT;
+    color: $FG;
+    border-left: 3px solid $ACCENT;
+}
+
+#entry:selected #text {
+    color: #ffffff;
+    font-weight: bold;
+}
+WOFEOF
+
+# 5. Update Mako Config
+cat <<MEOF > ~/.config/mako/config
+font=JetBrainsMono Nerd Font 11
+background-color=${BG}
+text-color=$FG
+border-color=$ACCENT
+border-size=2
+border-radius=10
+padding=12,16
+margin=12
+width=360
+height=120
+default-timeout=5000
+group-by=summary
+
+[urgency=low]
+border-color=$BG_ALT
+default-timeout=3000
+
+[urgency=high]
+border-color=#f7768e
+text-color=#f7768e
+default-timeout=0
+MEOF
+makoctl reload 2>/dev/null || (killall mako 2>/dev/null; mako &)
+
+# 6. Update Wallpaper with hyprpaper
+if [ -f "$WALLPAPER" ]; then
+    cat <<PEOF > ~/.config/hypr/hyprpaper.conf
+preload = $WALLPAPER
+wallpaper = ,$WALLPAPER
+splash = false
+PEOF
+    killall hyprpaper 2>/dev/null
+    nohup hyprpaper >/dev/null 2>&1 &
+fi
+
+# 7. Update Hyprlock Wallpaper
+sed -i "s|path = .*|path = $WALLPAPER|" ~/.config/hypr/hyprlock.conf 2>/dev/null || true
+
+# 8. Record active theme
+mkdir -p ~/.config/omarchy
+echo "$THEME" > ~/.config/omarchy/current_theme
+
+notify-send -t 2000 "Omarchy Theme" "Switched theme to $THEME_NAME" 2>/dev/null || true
+echo "Theme applied: $THEME_NAME"

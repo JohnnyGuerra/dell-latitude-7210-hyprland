@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Interactive Region Screenshot with Grim & Slurp
+
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+SCREENSHOT_DIR="$HOME/Pictures/Screenshots"
+mkdir -p "$SCREENSHOT_DIR"
+TARGET_FILE="$SCREENSHOT_DIR/screenshot_${TIMESTAMP}.png"
+
+GEOM=$(slurp -b "#1a1b2680" -c "#7aa2f7" -w 2 2>/dev/null)
+
+if [ -n "$GEOM" ]; then
+    grim -g "$GEOM" "$TARGET_FILE"
+    wl-copy < "$TARGET_FILE"
+    notify-send -i "$TARGET_FILE" "Screenshot Captured" "Saved to Screenshots and copied to clipboard"
+fi

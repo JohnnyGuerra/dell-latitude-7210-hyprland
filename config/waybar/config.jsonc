@@ -1,0 +1,121 @@
+{
+    "layer": "top",
+    "position": "top",
+    "height": 34,
+    "margin-top": 6,
+    "margin-left": 10,
+    "margin-right": 10,
+    "spacing": 8,
+    "modules-left": [
+        "hyprland/workspaces",
+        "hyprland/window"
+    ],
+    "modules-center": [
+        "clock"
+    ],
+    "modules-right": [
+        "custom/agent",
+        "pulseaudio",
+        "backlight",
+        "network",
+        "custom/tailscale",
+        "custom/keyboard",
+        "battery",
+        "tray"
+    ],
+    "hyprland/workspaces": {
+        "disable-scroll": true,
+        "all-outputs": true,
+        "format": "{name}",
+        "on-click": "activate"
+    },
+    "hyprland/window": {
+        "format": "{title}",
+        "max-length": 40,
+        "separate-outputs": true
+    },
+    "custom/agent": {
+        "format": "\ud83e\udd16 AI",
+        "tooltip": true,
+        "tooltip-format": "AI Agent Scratchpad (Super + Space)\nSuper + Shift + C: AI Crash Diagnostics",
+        "on-click": "/home/johnny/.local/bin/toggle-agent"
+    },
+    "clock": {
+        "format": "\udb82\udd54 {:%I:%M %p  \udb80\udced %a, %b %d}",
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+    },
+    "battery": {
+        "states": {
+            "good": 95,
+            "warning": 30,
+            "critical": 15
+        },
+        "format": "{icon} {capacity}% ({power:.1f}W)",
+        "format-charging": "\udb80\udc84 {capacity}% (+{power:.1f}W)",
+        "format-plugged": "\udb80\udc84 {capacity}% (Plugged)",
+        "format-icons": [
+            "\udb80\udc8e",
+            "\udb80\udc7a",
+            "\udb80\udc7b",
+            "\udb80\udc7c",
+            "\udb80\udc7d",
+            "\udb80\udc7e",
+            "\udb80\udc7f",
+            "\udb80\udc80",
+            "\udb80\udc81",
+            "\udb80\udc82",
+            "\udb80\udc79"
+        ],
+        "tooltip-format": "{timeTo}\nPower Rate: {power:.2f} W\nHealth: {health}%\nThresholds: 75%-85%"
+    },
+    "network": {
+        "format-wifi": "\udb82\udd28 {essid}",
+        "format-ethernet": "\udb80\ude00 {ipaddr}",
+        "format-linked": "\udb80\ude01 (No IP)",
+        "format-disconnected": "\udb82\udd2e Disconnected",
+        "tooltip-format": "{ifname} via {gwaddr} ({signalStrength}%)",
+        "on-click": "kitty -e nmtui"
+    },
+    "custom/tailscale": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "/home/johnny/.local/bin/tailscale-status",
+        "interval": 10,
+        "on-click": "kitty --hold -e tailscale status",
+        "tooltip": true
+    },
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-muted": "\udb81\udf5f Muted",
+        "format-icons": {
+            "default": [
+                "\udb81\udd7f",
+                "\udb81\udd80",
+                "\udb81\udd7e"
+            ]
+        },
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "on-scroll-up": "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+",
+        "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+    },
+    "backlight": {
+        "format": "{icon} {percent}%",
+        "format-icons": [
+            "\udb80\udcde",
+            "\udb80\udcdf",
+            "\udb80\udce0"
+        ],
+        "on-scroll-up": "brightnessctl -e4 -n2 set 5%+",
+        "on-scroll-down": "brightnessctl -e4 -n2 set 5%-"
+    },
+    "tray": {
+        "icon-size": 16,
+        "spacing": 8
+    },
+    "custom/keyboard": {
+        "format": "\u2328",
+        "tooltip": true,
+        "tooltip-format": "Toggle On-Screen Keyboard (Super + K)",
+        "on-click": "/home/johnny/.local/bin/toggle-keyboard"
+    }
+}

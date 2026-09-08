@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Exit / Logout Confirmation Dialog with Wofi
+
+# If an instance is already open, close it
+if pidof wofi >/dev/null; then
+    killall wofi 2>/dev/null
+    exit 0
+fi
+
+SELECTION=$(printf "󰜺  Cancel / Keep Working\n󰍃  Exit Session (Logout)\n󰤄  Suspend System\n󰑐  Reboot System\n󰐥  Power Off" | wofi --dmenu --prompt "⚠️ Session Power & Exit" --lines 5 --width 450 --hide-scroll)
+
+case "$SELECTION" in
+    *"Exit Session (Logout)"*)
+        command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch exit
+        ;;
+    *"Suspend System"*)
+        systemctl suspend
+        ;;
+    *"Reboot System"*)
+        systemctl reboot
+        ;;
+    *"Power Off"*)
+        systemctl poweroff
+        ;;
+    *)
+        exit 0
+        ;;
+esac

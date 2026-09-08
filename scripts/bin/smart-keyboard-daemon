@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Native Auto & Tablet Keyboard Daemon for Dell 7210 2-in-1
+
+FOLIO_DEVICE_PATH="/sys/bus/usb/devices/1-4"
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)}"
+
+start_wvkbd_auto() {
+    if ! pgrep -f "wvkbd-deskintl.*--auto" >/dev/null 2>&1; then
+        killall -9 wvkbd-deskintl 2>/dev/null
+        wvkbd-deskintl \
+            --auto \
+            -L 300 \
+            -R 10 \
+            --alpha 220 \
+            --bg 1a1b26 \
+            --fg 24283b \
+            --fg-sp 1f2335 \
+            --text c0caf5 \
+            --text-sp 7aa2f7 \
+            --press 7aa2f7 \
+            --text-press 1a1b26 \
+            &
+    fi
+}
+
+stop_wvkbd() {
+    if pgrep -f wvkbd-deskintl >/dev/null 2>&1; then
+        killall -9 wvkbd-deskintl 2>/dev/null
+        ~/.local/bin/adjust-agent-size restore &
+    fi
+}
+
+# Watcher loop to ensure auto keyboard runs ONLY when detached
+while true; do
+    if [ -d "$FOLIO_DEVICE_PATH" ]; then
+        # Keyboard attached -> kill/stop on-screen keyboard
+        stop_wvkbd
+    else
+        # Keyboard detached -> ensure --auto is running
+        start_wvkbd_auto
+    fi
+    sleep 2
+done

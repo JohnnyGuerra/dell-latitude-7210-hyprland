@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Dynamically resize the AI Scratchpad based on virtual keyboard visibility
+
+STATE="$1"
+
+SIG=$(ls -t "/run/user/$(id -u)/hypr/" 2>/dev/null | head -n 1)
+if [ -n "$SIG" ]; then
+    export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+fi
+
+if [ "$STATE" = "shrink" ]; then
+    hyprctl repl "hl.dispatch(hl.dsp.window.resize({ x = 1420, y = 596, relative = false, window = \"class:agent-terminal\" }))" >/dev/null 2>&1
+    hyprctl repl "hl.dispatch(hl.dsp.window.center({ window = \"class:agent-terminal\" }))" >/dev/null 2>&1
+else
+    hyprctl repl "hl.dispatch(hl.dsp.window.resize({ x = 1420, y = 896, relative = false, window = \"class:agent-terminal\" }))" >/dev/null 2>&1
+    hyprctl repl "hl.dispatch(hl.dsp.window.center({ window = \"class:agent-terminal\" }))" >/dev/null 2>&1
+fi

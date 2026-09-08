@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# ==========================================================
+# Omarchy Central Control Menu (Zero Background Battery Draw)
+# ==========================================================
+
+# If wofi is already running, toggle it off
+if pidof wofi >/dev/null; then
+    killall wofi 2>/dev/null
+    exit 0
+fi
+
+MENU_PROMPT="󰣇 Omarchy Control Hub"
+
+SELECTION=$(cat << 'LIST' | wofi --dmenu --prompt "$MENU_PROMPT" --lines 12 --width 650 --hide-scroll
+󰏘  Switch Desktop Theme (8 Themes)
+⌨  Keybindings Cheatsheet
+󰍹  Toggle Screen Refresh Rate (60Hz / 48Hz Battery Mode)
+󰑮  Rotate Screen Orientation (Landscape / Portrait)
+🔋 Battery & Power Profiles (TLP Status / Mode)
+📦 Package Manager (Update / Install / Clean)
+🌐 Tailscale Network Manager
+󰚩  Open AI Scratchpad (Antigravity)
+󰒍  Run AI Crash Diagnostics
+󰌾  Lock Screen (Hyprlock)
+󰤄  Suspend System (Modern Standby)
+󰐥  Power Options (Reboot / Poweroff)
+LIST
+)
+
+case "$SELECTION" in
+    *"Switch Desktop Theme"*)
+        ~/.local/bin/omarchy-theme ;;
+    *"Keybindings Cheatsheet"*)
+        ~/.local/bin/hypr-cheatsheet ;;
+    *"Toggle Screen Refresh Rate"*)
+        ~/.local/bin/toggle-refresh-rate ;;
+    *"Rotate Screen Orientation"*)
+        ~/.local/bin/rotate-screen ;;
+    *"Battery & Power Profiles"*)
+        POWER_OPT=$(printf "1. View Battery Health & Power Draw\n2. Force Battery Mode (TLP powersave)\n3. Force AC Performance Mode\n4. Trigger Full Charge (Override threshold to 100%%)" | wofi --dmenu --prompt "🔋 Battery Management" --lines 5 --width 550)
+        case "$POWER_OPT" in
+            *"View Battery Health"*)
+                kitty --title "Battery Status" -e bash -c "upower -i \$(upower -e | grep BAT); echo; echo 'Press Enter to close...'; read" & ;;
+            *"Force Battery Mode"*)
+                sudo tlp bat && notify-send -t 3000 "TLP Power" "Forced Battery Power Profile" ;;
+            *"Force AC Performance"*)
+                sudo tlp ac && notify-send -t 3000 "TLP Power" "Forced AC Performance Profile" ;;
+            *"Trigger Full Charge"*)
+                sudo tlp fullcharge && notify-send -t 3000 "TLP Power" "Full Charge to 100% Armed" ;;
+        esac
+        ;;
+    *"Package Manager"*)
+        PKG_OPT=$(printf "1. System Update (Pacman + AUR)\n2. Search Packages\n3. Clean Cache & Remove Orphans" | wofi --dmenu --prompt "📦 Package Tools" --lines 4 --width 500)
+        case "$PKG_OPT" in
+            *"System Update"*)
+                kitty --title "Omarchy System Update" -e bash -c "~/.local/bin/omarchy update; echo 'Done. Press Enter...'; read" & ;;
+            *"Search Packages"*)
+                QUERY=$(wofi --dmenu --prompt "Search packages...")
+                [ -n "$QUERY" ] && kitty --title "Package Search: $QUERY" -e bash -c "yay -Ss '$QUERY'; echo 'Press Enter...'; read" & ;;
+            *"Clean Cache"*)
+                kitty --title "Cleaning Cache" -e bash -c "~/.local/bin/omarchy clean; echo 'Press Enter...'; read" & ;;
+        esac
+        ;;
+    *"Tailscale Network Manager"*)
+        TS_OPT=$(printf "1. Tailscale Status\n2. Connect Tailscale\n3. Disconnect Tailscale" | wofi --dmenu --prompt "🌐 Tailscale" --lines 4 --width 450)
+        case "$TS_OPT" in
+            *"Tailscale Status"*)
+                kitty --title "Tailscale Status" -e bash -c "tailscale status; echo; echo 'Press Enter...'; read" & ;;
+            *"Connect Tailscale"*)
+                sudo tailscale up && notify-send "Tailscale" "Connected" ;;
+            *"Disconnect Tailscale"*)
+                sudo tailscale down && notify-send "Tailscale" "Disconnected" ;;
+        esac
+        ;;
+    *"Open AI Scratchpad"*)
+        ~/.local/bin/toggle-agent ;;
+    *"Run AI Crash Diagnostics"*)
+        ~/.local/bin/ai-debug-crash ;;
+    *"Lock Screen"*)
+        hyprlock ;;
+    *"Suspend System"*)
+        systemctl suspend ;;
+    *"Power Options"*)
+        PWR_OPT=$(printf "1. Suspend\n2. Reboot\n3. Power Off" | wofi --dmenu --prompt "󰐥 Power Options" --lines 4 --width 350)
+        case "$PWR_OPT" in
+            *"Suspend"*) systemctl suspend ;;
+            *"Reboot"*) systemctl reboot ;;
+            *"Power Off"*) systemctl poweroff ;;
+        esac
+        ;;
+esac

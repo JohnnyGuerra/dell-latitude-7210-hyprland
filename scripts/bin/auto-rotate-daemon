@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""
+Direct sysfs Hardware Accelerometer Auto-Rotation Daemon
+for Dell Latitude 7210 2-in-1 under Hyprland.
+
+Reads hardware accel_3d registers directly without D-Bus proxy delay or buffering.
+Only applies rotation when the folio keyboard is DETACHED.
+"""
+
+import os
+import sys
+import time
+import subprocess
+
+FOLIO_PATH = "/sys/bus/usb/devices/1-4"
+ACCEL_X_PATH = "/sys/bus/iio/devices/iio:device0/in_accel_x_raw"
+ACCEL_Y_PATH = "/sys/bus/iio/devices/iio:device0/in_accel_y_raw"
+
+MONITOR = "eDP-1"
+SCALE = "1.33"
+
+current_transform = 0
+
+def get_hyprland_sig():
+    uid = os.getuid()
+    hypr_dir = f"/run/user/{uid}/hypr"
+    if os.path.exists(hypr_dir):
+        sigs = [f for f in os.listdir(hypr_dir) if not f.startswith(".")]
+        if sigs:
+            sigs.sort(key=lambda f: os.path.getmtime(os.path.join(hypr_dir, f)), reverse=True)
+            return sigs[0]
+    return ""
+
+def apply_transform(new_transform):
+    global current_transform
+    if new_transform == current_transform:
+        return
+    current_transform = new_transform
+    
+    sig = get_hyprland_sig()
+    env = os.environ.copy()
+    if sig:
+        env["HYPRLAND_INSTANCE_SIGNATURE"] = sig
+    
+    cmd = [
+        "hyprctl", "eval",
+        f"hl.monitor({{ output = {MONITOR}, mode = preferred, position = 0x0, scale = {SCALE}, transform = {new_transform} }})"
+    ]
+    try:
+        subprocess.run(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+def read_axis(path):
+    try:
+        with open(path, "r") as f:
+            return int(f.read().strip())
+    except Exception:
+        return 0
+
+def main():
+    global current_transform
+    # Hysteresis threshold (~3.5 m/s^2 equivalent in raw counts)
+    THRESHOLD = 450000
+
+    while True:
+        try:
+            # Check if folio keyboard is attached
+            if os.path.exists(FOLIO_PATH):
+                if current_transform != 0:
+                    apply_transform(0)
+                time.sleep(1.5)
+                continue
+
+            # Keyboard is detached -> evaluate raw gravity vector
+            x = read_axis(ACCEL_X_PATH)
+            y = read_axis(ACCEL_Y_PATH)
+
+            # Determine dominant axis with hysteresis
+            if abs(y) > abs(x):
+                if y < -THRESHOLD:
+                    new_tf = 0  # Standard Landscape (tilt up)
+                elif y > THRESHOLD:
+                    new_tf = 2  # Inverted Landscape
+                else:
+                    new_tf = current_transform
+            else:
+                if x < -THRESHOLD:
+                    new_tf = 1  # Portrait (rotated 90 deg clockwise)
+                elif x > THRESHOLD:
+                    new_tf = 3  # Inverted Portrait (rotated 270 deg)
+                else:
+                    new_tf = current_transform
+
+            if new_tf != current_transform:
+                apply_transform(new_tf)
+
+        except Exception:
+            pass
+
+        time.sleep(0.4)
+
+if __name__ == "__main__":
+    main()

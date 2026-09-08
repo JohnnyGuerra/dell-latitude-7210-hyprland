@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Screen rotation script for Dell Latitude 7210 2-in-1 under Hyprland
+
+SIG=$(ls -t "/run/user/$(id -u)/hypr/" 2>/dev/null | head -n 1)
+[ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+
+MONITOR="eDP-1"
+SCALE="1.33"
+
+# Read current transform via jq
+CURRENT_TRANSFORM=$(hyprctl monitors -j | jq -r .[0].transform // 0)
+
+case "$CURRENT_TRANSFORM" in
+    0) NEXT_TRANSFORM=1 ;; # Portrait
+    1) NEXT_TRANSFORM=2 ;; # Inverted Landscape
+    2) NEXT_TRANSFORM=3 ;; # Inverted Portrait
+    *) NEXT_TRANSFORM=0 ;; # Normal Landscape
+esac
+
+if [ -n "$1" ]; then
+    case "$1" in
+        0|normal|landscape) NEXT_TRANSFORM=0 ;;
+        1|portrait|right) NEXT_TRANSFORM=1 ;;
+        2|inverted|flipped) NEXT_TRANSFORM=2 ;;
+        3|portrait-left|left) NEXT_TRANSFORM=3 ;;
+        *) NEXT_TRANSFORM="$1" ;;
+    esac
+fi
+
+hyprctl eval "hl.monitor({ output = , mode = preferred, position = 0x0, scale = , transform = $NEXT_TRANSFORM })" >/dev/null 2>&1
+notify-send -t 1500 "Screen Rotation" "Orientation set to transform $NEXT_TRANSFORM" 2>/dev/null || true

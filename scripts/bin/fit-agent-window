@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Smart Scratchpad Geometry Fitter for Landscape & Portrait
+
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)}"
+SIG=$(ls -t "$XDG_RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
+[ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+
+# Read active transform as clean integer
+TRANSFORM=$(hyprctl monitors -j 2>/dev/null | jq -r .[0].transform)
+TRANSFORM=${TRANSFORM:-0}
+
+# Check if on-screen keyboard is currently running
+KB_OPEN=0
+pgrep -f wvkbd-deskintl >/dev/null 2>&1 && KB_OPEN=1
+
+if [ "$TRANSFORM" = "1" ] || [ "$TRANSFORM" = "3" ]; then
+    # =========================================================================
+    # PORTRAIT (Screen is 960 width x 1440 height)
+    # Waybar: y=6 to 40, width=940
+    # Left & Right margins: 10px -> Width = 940px (x=10 to 950)
+    # Top margin: 10px below Waybar -> y=50
+    # =========================================================================
+    TARGET_W=940
+    TARGET_X=10
+    TARGET_Y=50
+
+    if [ "$KB_OPEN" = "1" ]; then
+        # Keyboard top is at y=1060 (height=380).
+        # We want a 10px margin above keyboard -> bottom of window at y=1050.
+        # Height = 1050 - 50 = 1000px
+        TARGET_H=1000
+    else
+        # Full height in portrait:
+        # Bottom of screen is 1440. Leave 14px bottom margin -> bottom at 1426.
+        # Height = 1426 - 50 = 1376px
+        TARGET_H=1376
+    fi
+else
+    # =========================================================================
+    # LANDSCAPE (Screen is 1440 width x 960 height)
+    # Waybar: y=6 to 40, width=1420
+    # Left & Right margins: 10px -> Width = 1420px (x=10 to 1430)
+    # =========================================================================
+    TARGET_W=1420
+    TARGET_X=10
+
+    if [ "$KB_OPEN" = "1" ]; then
+        # Keyboard top is at y=660 (height=300).
+        # Top at y=50, bottom at y=650 (10px gap above keyboard). Height = 600px
+        TARGET_Y=50
+        TARGET_H=600
+    else
+        # Full height centered in landscape: y=52, height=896 (bottom at 948)
+        TARGET_Y=52
+        TARGET_H=896
+    fi
+fi
+
+# Apply exact geometry to agent-terminal
+hyprctl repl "hl.dispatch(hl.dsp.window.resize({ x = $TARGET_W, y = $TARGET_H, relative = false, window = \"class:agent-terminal\" }))" >/dev/null 2>&1
+hyprctl repl "hl.dispatch(hl.dsp.window.move({ x = $TARGET_X, y = $TARGET_Y, window = \"class:agent-terminal\" }))" >/dev/null 2>&1

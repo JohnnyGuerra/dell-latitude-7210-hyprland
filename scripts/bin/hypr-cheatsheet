@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Hyprland Keybindings Cheatsheet for Dell Latitude 7210 2-in-1
+
+# If wofi is already running, toggle it off
+if pidof wofi >/dev/null; then
+    killall wofi 2>/dev/null
+    exit 0
+fi
+
+SELECTION=$(cat << 'LIST' | wofi --dmenu --prompt "⌨ Keybindings Cheatsheet" --lines 19 --width 720 --hide-scroll
+󰌌  Super + Alt + Space      󰣇 Open Omarchy Control Hub
+󰌌  Super + Space / S        󰚩 Toggle AI Scratchpad (agy)
+󰌌  Super + D                󱓞 Open Application Launcher (Wofi)
+󰌌  Super + Return / Q       󰞷 Open Terminal (Kitty)
+󰌌  Super + E                󰉋 Open File Manager (Nautilus)
+󰌌  Super + G                󰊢 Open Floating Lazygit
+󰌌  Super + C / W            󰅖 Close Active Window
+󰌌  Super + V                📋 Clipboard History (Wofi)
+󰌌  Super + Shift + V        󰉈 Toggle Floating Window
+󰌌  Super + Shift + S        📸 Screenshot Region (Grim+Slurp)
+󰌌  Super + K                ⌨ Toggle Virtual Keyboard
+󰌌  Super + F                󰊓 Toggle Fullscreen
+󰌌  Super + J                󰤉 Toggle Dwindle Split
+󰌌  Super + L                󰌾 Lock Screen (Hyprlock)
+󰌌  Super + Alt + T          󰏘 Open Theme Switcher
+󰌌  Super + Shift + R        󰑮 Rotate Screen Orientation
+󰌌  Super + Shift + D        󰍹 Toggle Refresh Rate (60Hz / 48Hz)
+󰌌  Super + Shift + E        🔋 Toggle Magic Eco Mode (3.2W / 8h+)
+󰌌  Super + Shift + C        󰒍 AI Crash Diagnostics
+󰌌  Super + [1 - 9]          󰍩 Switch to Workspace [1 - 9]
+󰌌  Super + Shift + [1 - 9]  󰆓 Move Window to Workspace [1 - 9]
+󰌌  Super + Arrow Keys       󰁔 Move Window Focus (Left/Right/Up/Down)
+󰌌  Super + Mouse Left/Right 󰆾 Drag Move / Resize Window
+󰌌  Audio & Brightness Keys  󰕾 Volume Up/Down/Mute, 󰃠 Backlight
+LIST
+)
+
+# Optional: Trigger action if selected
+case "$SELECTION" in
+    *"Omarchy Control Hub"*) ~/.local/bin/omarchy-menu ;;
+    *"AI Scratchpad"*) ~/.local/bin/toggle-agent ;;
+    *"Application Launcher"*) wofi --show drun ;;
+    *"Open Terminal"*) kitty & ;;
+    *"File Manager"*) nautilus & ;;
+    *"Floating Lazygit"*) kitty --class lazygit-float -e lazygit & ;;
+    *"Lock Screen"*) hyprlock & ;;
+    *"Theme Switcher"*) ~/.local/bin/omarchy-theme ;;
+    *"Rotate Screen"*) ~/.local/bin/rotate-screen ;;
+    *"Toggle Refresh Rate"*) ~/.local/bin/toggle-refresh-rate ;;
+    *"Magic Eco Mode"*) ~/.local/bin/toggle-eco-mode ;;
+    *"AI Crash Diagnostics"*) ~/.local/bin/ai-debug-crash ;;
+esac
