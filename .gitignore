@@ -1,0 +1,17 @@
+# OS / Editor artifacts
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Environment / Secrets
+.env
+.env.local
+*.key
+*.pem
+
+# Backups and temporary files
+*.bak
+*.tmp
