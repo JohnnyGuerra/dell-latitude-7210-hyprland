@@ -1,5 +1,5 @@
 -- ==============================================================================
--- Dell Latitude 7210 2-in-1: Touch & Tablet Gestures for Hyprland 0.56+ (Lua)
+-- Dell Latitude 7210 2-in-1: Touchscreen & Touchpad Gestures (Hyprland 0.56+)
 -- ==============================================================================
 
 -- Touch Environment Variables
@@ -23,7 +23,7 @@ hl.config({
     },
 })
 
--- Multi-Finger Gestures
+-- Touchpad Native Multi-Finger Gestures
 hl.gesture({
     fingers = 3,
     direction = horizontal,
@@ -35,7 +35,7 @@ hl.gesture({
     direction = vertical,
     action = {
         finish = function()
-            hl.dsp.workspace.toggle_special(agent)
+            hl.dispatch(hl.dsp.workspace.toggle_special(agent))
         end
     }
 })
@@ -45,7 +45,7 @@ hl.gesture({
     direction = vertical,
     action = {
         finish = function()
-            hl.dsp.exec_cmd(os.getenv(HOME) .. /.local/bin/toggle-keyboard)
+            hl.dispatch(hl.dsp.exec_cmd(os.getenv(HOME) .. /.local/bin/touch-action keyboard))
         end
     }
 })
@@ -55,7 +55,7 @@ hl.gesture({
     direction = horizontal,
     action = {
         finish = function()
-            hl.dsp.exec_cmd(wofi --show drun)
+            hl.dispatch(hl.dsp.exec_cmd(os.getenv(HOME) .. /.local/bin/touch-action launcher))
         end
     }
 })
