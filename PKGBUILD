@@ -1,6 +1,6 @@
 # Maintainer: Johnny Guerra <johnny.guerra@gmail.com>
 pkgname=dell-latitude-7210-hyprland-git
-pkgver=r6.795b3ad
+pkgver=r7.dee5094
 pkgrel=1
 pkgdesc="Turnkey, touch-optimized Hyprland tablet suite & power management for Dell Latitude 7210 2-in-1 on Arch Linux"
 arch=('any')

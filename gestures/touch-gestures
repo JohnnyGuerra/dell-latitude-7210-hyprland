@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
-# Hardware Edge Gestures Daemon for Dell Latitude 7210 (Hyprland / lisgd)
-# Enables iPad-style edge swipes:
-# - Bottom edge swipe up: Toggle On-Screen Keyboard (wvkbd)
-# - Bottom edge swipe down: Dismiss On-Screen Keyboard
-# - Top edge swipe down: Toggle Brightness Slider
-# - Right edge swipe left: Toggle AI Agent Scratchpad
-# - Left edge swipe right: Toggle App Launcher (wofi)
+# Hardware Edge & Multi-Touch Gestures Daemon for Dell Latitude 7210 (lisgd)
+# Supports both edge-swipes (from bezels) and multi-finger gestures (anywhere on glass)
 
 export XDG_RUNTIME_DIR="/run/user/$(id -u)"
 export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)}"
@@ -42,4 +37,4 @@ case "$TRANSFORM" in
     *) LISGD_O=0 ;;
 esac
 
-exec /usr/bin/lisgd -d "$DEV"     -o "$LISGD_O"     -t 90     -m 1200     -r 20     -g "1,DU,B,*,R,$HOME/.local/bin/toggle-keyboard"     -g "1,UD,B,*,R,$HOME/.local/bin/toggle-keyboard close"     -g "1,UD,T,*,R,$HOME/.local/bin/slider-popup brightness"     -g "1,RL,R,*,R,hyprctl dispatch togglespecialworkspace agent"     -g "1,LR,L,*,R,wofi --show drun"
+exec /usr/bin/lisgd -d "$DEV"     -w 1920 -h 1280     -s 3.0     -o "$LISGD_O"     -t 50     -m 1200     -r 25     -g "1,DU,B,*,R,$HOME/.local/bin/toggle-keyboard"     -g "1,UD,B,*,R,$HOME/.local/bin/toggle-keyboard close"     -g "1,UD,T,*,R,$HOME/.local/bin/slider-popup brightness"     -g "1,RL,R,*,R,hyprctl dispatch togglespecialworkspace agent"     -g "1,LR,L,*,R,wofi --show drun"     -g "2,DU,*,*,R,$HOME/.local/bin/toggle-keyboard"     -g "2,UD,*,*,R,$HOME/.local/bin/toggle-keyboard close"     -g "3,DU,*,*,R,hyprctl dispatch togglespecialworkspace agent"     -g "3,UD,*,*,R,hyprctl dispatch togglespecialworkspace agent"     -g "3,RL,*,*,R,hyprctl dispatch workspace m+1"     -g "3,LR,*,*,R,hyprctl dispatch workspace m-1"
