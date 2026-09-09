@@ -4,12 +4,13 @@ Hardware-Synchronized Animated Vertical Slider Popup for Hyprland
 Supports both Touch Tablet and Folio Trackpad / Mouse on Dell Latitude 7210 2-in-1
 
 Features:
-- Vertical capsule card dropping directly from the Waybar button
-- Hyprland layer-shell animation (slide from top)
+- Vertical capsule card sliding smoothly OUT FROM BEHIND the Waybar button
+- Slides smoothly BACK IN underneath the button when toggled or dismissed
+- Hyprland layer-shell animation (slide top)
 - Live PipeWire / sysfs hardware synchronization
 - Background AudioWorker to guarantee zero UI thread lag
 - Interactive mute toggle (audio) & step cycling (brightness) on bottom icon
-- Debounced touch singleton with toggle-to-close behavior
+- Debounced touch singleton with animated toggle-to-close behavior
 - 32-bit RGBA transparency with Catppuccin Mocha theme & accent glow
 """
 
@@ -38,7 +39,7 @@ def is_pid_running(pid):
     except OSError:
         return False
 
-# Single-instance toggle & touch-debounce logic
+# Single-instance animated toggle & touch-debounce logic
 if os.path.exists(PID_FILE):
     try:
         with open(PID_FILE, "r") as f:
@@ -51,19 +52,24 @@ if os.path.exists(PID_FILE):
 
             if is_pid_running(old_pid):
                 elapsed = now - old_time
-                if old_mode == mode and elapsed < 0.5:
+                if old_mode == mode and elapsed < 0.35:
                     # Debounce rapid touch bounce
                     sys.exit(0)
 
-                # Kill previous instance
-                os.kill(old_pid, signal.SIGTERM)
                 if old_mode == mode:
-                    # Toggling same module: close and exit
+                    # Toggling same module: send SIGUSR1 to trigger smooth slide-out exit animation
                     try:
-                        os.remove(PID_FILE)
+                        os.kill(old_pid, signal.SIGUSR1)
+                    except Exception:
+                        os.kill(old_pid, signal.SIGTERM)
+                    sys.exit(0)
+                else:
+                    # Switching to different module: close old and continue
+                    try:
+                        os.kill(old_pid, signal.SIGTERM)
                     except Exception:
                         pass
-                    sys.exit(0)
+                    time.sleep(0.1)
         try:
             os.remove(PID_FILE)
         except Exception:
@@ -134,17 +140,6 @@ class AudioWorker(threading.Thread):
                 subprocess.run(["pactl", "set-sink-volume", "@DEFAULT_SINK@", f"{val}%"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             self.queue.task_done()
 
-def cleanup(*args):
-    if os.path.exists(PID_FILE):
-        try:
-            os.remove(PID_FILE)
-        except Exception:
-            pass
-    Gtk.main_quit()
-
-signal.signal(signal.SIGINT, cleanup)
-signal.signal(signal.SIGTERM, cleanup)
-
 def get_current_value(m):
     if m == "volume":
         try:
@@ -186,13 +181,19 @@ def get_current_value(m):
             return 50, False
 
 
+app_window = None
+
 class SliderPopup(Gtk.Window):
     def __init__(self, mode):
         super().__init__()
+        global app_window
+        app_window = self
+
         self.mode = mode
         self.min_val = MIN_VAL
         self.val, self.muted = get_current_value(mode)
         self.last_applied_val = self.val
+        self.is_closing = False
 
         if mode == "volume":
             self.audio_worker = AudioWorker()
@@ -215,13 +216,15 @@ class SliderPopup(Gtk.Window):
         self.set_app_paintable(True)
 
         # LayerShell setup
+        # Layer.TOP places the popup directly behind Waybar (which is Layer.OVERLAY),
+        # allowing the slider to slide OUT from behind the Waybar button, and slide back in!
         GtkLayerShell.init_for_window(self)
-        GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
+        GtkLayerShell.set_layer(self, GtkLayerShell.Layer.TOP)
         GtkLayerShell.set_namespace(self, "slider-popup")
 
         # Alignment directly dropping from the respective button:
-        # Volume button center: ~431 margin_right
-        # Brightness button center: ~356 margin_right
+        # Volume button center: ~401 margin_right
+        # Brightness button center: ~328 margin_right
         margin_r = 401 if mode == "volume" else 328
 
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.TOP, True)
@@ -245,7 +248,7 @@ class SliderPopup(Gtk.Window):
         close_btn.set_name("close-btn")
         close_btn.set_halign(Gtk.Align.CENTER)
         close_btn.set_valign(Gtk.Align.CENTER)
-        close_btn.connect("clicked", lambda b: self.close())
+        close_btn.connect("clicked", lambda b: self.close_animated())
         box.pack_start(close_btn, False, False, 0)
 
         # Value text (Percentage / Muted)
@@ -404,6 +407,31 @@ class SliderPopup(Gtk.Window):
         # Auto-dismiss timer (4.5 seconds idle)
         self.timer_id = GLib.timeout_add(4500, self.auto_dismiss)
 
+    def close_animated(self):
+        """
+        Smooth slide-out exit animation:
+        Unmaps the Wayland surface so Hyprland plays layersOut (sliding back in behind Waybar),
+        then cleanly terminates the process after the animation finishes.
+        """
+        if self.is_closing:
+            return
+        self.is_closing = True
+
+        if os.path.exists(PID_FILE):
+            try:
+                os.remove(PID_FILE)
+            except Exception:
+                pass
+
+        if self.timer_id:
+            GLib.source_remove(self.timer_id)
+            self.timer_id = None
+
+        # Unmap window so Hyprland triggers layersOut slide animation
+        self.destroy()
+        # Keep GTK main loop alive for 400ms to allow Hyprland to finish the slide-out
+        GLib.timeout_add(400, Gtk.main_quit)
+
     def on_window_destroy(self, widget):
         if self.brightness_file:
             try:
@@ -414,17 +442,19 @@ class SliderPopup(Gtk.Window):
             self.audio_worker.stop()
 
     def reset_timer(self):
+        if self.is_closing:
+            return
         if self.timer_id:
             GLib.source_remove(self.timer_id)
         self.timer_id = GLib.timeout_add(4500, self.auto_dismiss)
 
     def auto_dismiss(self):
-        self.close()
+        self.close_animated()
         return False
 
     def on_key_press(self, widget, event):
         if event.keyval == Gdk.KEY_Escape:
-            self.close()
+            self.close_animated()
             return True
         return False
 
@@ -497,6 +527,24 @@ class SliderPopup(Gtk.Window):
             else:
                 self.icon_label.set_text("󰃠")
             self.val_label.set_text(f"{val}%")
+
+def handle_sigusr1(*args):
+    """Trigger smooth animated exit upon toggle click from Waybar"""
+    if app_window:
+        GLib.idle_add(app_window.close_animated)
+
+def handle_sigterm(*args):
+    """Emergency or abrupt shutdown"""
+    if os.path.exists(PID_FILE):
+        try:
+            os.remove(PID_FILE)
+        except Exception:
+            pass
+    Gtk.main_quit()
+
+signal.signal(signal.SIGUSR1, handle_sigusr1)
+signal.signal(signal.SIGTERM, handle_sigterm)
+signal.signal(signal.SIGINT, handle_sigterm)
 
 def main():
     win = SliderPopup(mode)
