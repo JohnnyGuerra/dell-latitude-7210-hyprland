@@ -250,6 +250,8 @@ class SliderPopup(Gtk.Window):
         # Close button (touch-friendly ✕)
         close_btn = Gtk.Button(label="✕")
         close_btn.set_name("close-btn")
+        close_btn.set_valign(Gtk.Align.CENTER)
+        close_btn.set_halign(Gtk.Align.CENTER)
         close_btn.connect("clicked", lambda b: self.close())
         box.pack_start(close_btn, False, False, 0)
 
@@ -282,40 +284,82 @@ class SliderPopup(Gtk.Window):
             color: #cdd6f4;
             min-width: 50px;
         }
-        #close-btn {
-            background-color: rgba(69, 71, 90, 0.6);
-            color: #cdd6f4;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            padding: 4px 10px;
-            min-width: 34px;
-            min-height: 34px;
+        #touch-slider {
+            background: transparent;
+            background-image: none;
+            box-shadow: none;
             border: none;
+            outline: none;
         }
-        #close-btn:active {
-            background-color: #f38ba8;
-            color: #11111b;
+        #touch-slider contents {
+            background: transparent;
+            background-image: none;
+            box-shadow: none;
+            border: none;
+            outline: none;
         }
         #touch-slider trough {
             min-height: 20px;
             min-width: 220px;
             border-radius: 10px;
+            background-image: none;
             background-color: rgba(69, 71, 90, 0.85);
+            border: none;
+            box-shadow: none;
+            outline: none;
         }
         #touch-slider highlight {
             min-height: 20px;
             border-radius: 10px;
+            background-image: none;
             background-color: """ + accent_color + b""";
+            border: none;
+            box-shadow: none;
+            outline: none;
         }
         #touch-slider slider {
             min-width: 34px;
             min-height: 34px;
             margin: -7px 0;
             border-radius: 50%;
+            background-image: none;
             background-color: #ffffff;
             border: 3px solid #1e1e2e;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
+            outline: none;
+        }
+        #touch-slider slider:active,
+        #touch-slider slider:hover {
+            background-image: none;
+            background-color: #ffffff;
+            border: 3px solid """ + accent_color + b""";
+            outline: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+        }
+        #close-btn {
+            background-image: none;
+            background-color: rgba(69, 71, 90, 0.75);
+            color: #cdd6f4;
+            border-radius: 50%;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 0;
+            margin: 0;
+            min-width: 34px;
+            min-height: 34px;
+            border: none;
+            box-shadow: none;
+            outline: none;
+        }
+        #close-btn:hover {
+            background-image: none;
+            background-color: rgba(90, 93, 115, 0.95);
+            color: #ffffff;
+        }
+        #close-btn:active {
+            background-image: none;
+            background-color: #f38ba8;
+            color: #11111b;
         }
         """
         provider = Gtk.CssProvider()
