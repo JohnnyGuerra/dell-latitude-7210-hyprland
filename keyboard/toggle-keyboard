@@ -14,6 +14,19 @@ if [ -f "$CONFIG_FILE" ]; then
     CURRENT_MODE=$(cat "$CONFIG_FILE" | tr -d ' \n')
 fi
 
+is_kbd_running() {
+    pgrep -x wvkbd-deskintl >/dev/null 2>&1 || pgrep -x wvkbd-mobintl >/dev/null 2>&1
+}
+
+if [ "$1" = "close" ]; then
+    if is_kbd_running; then
+        killall -9 wvkbd-deskintl wvkbd-mobintl 2>/dev/null
+        ~/.local/bin/fit-agent-window >/dev/null 2>&1 &
+        pkill -RTMIN+1 waybar 2>/dev/null || true
+    fi
+    exit 0
+fi
+
 if [ -n "$1" ]; then
     case "$1" in
         full|right|left)
@@ -33,7 +46,7 @@ if [ -n "$1" ]; then
 fi
 
 # If already open and no explicit mode was passed, toggle closed
-if [ -z "$1" ] && pgrep -f 'wvkbd-(deskintl|mobintl)' >/dev/null 2>&1; then
+if [ -z "$1" ] && is_kbd_running; then
     killall -9 wvkbd-deskintl wvkbd-mobintl 2>/dev/null
     ~/.local/bin/fit-agent-window >/dev/null 2>&1 &
     pkill -RTMIN+1 waybar 2>/dev/null || true
@@ -41,7 +54,7 @@ if [ -z "$1" ] && pgrep -f 'wvkbd-(deskintl|mobintl)' >/dev/null 2>&1; then
 fi
 
 # If open and an explicit mode or cycle was passed, kill existing to relaunch
-if pgrep -f 'wvkbd-(deskintl|mobintl)' >/dev/null 2>&1; then
+if is_kbd_running; then
     killall -9 wvkbd-deskintl wvkbd-mobintl 2>/dev/null
 fi
 
@@ -70,22 +83,7 @@ elif [ "$CURRENT_MODE" = "left" ]; then
     EXTRA_ARGS="--dock left --ratio $KBD_RATIO"
 fi
 
-$KBD_BIN \
-    -L 300 \
-    -H "$KBD_HEIGHT" \
-    -R 12 \
-    --fn "$KBD_FONT" \
-    --alpha 175 \
-    --bg-alpha 235 \
-    --bg 1e1e2e \
-    --fg 313244 \
-    --fg-sp 45475a \
-    --text cdd6f4 \
-    --text-sp cba6f7 \
-    --press cba6f7 \
-    --text-press 1e1e2e \
-    --double-space-period $EXTRA_ARGS \
-    >/dev/null 2>&1 &
+$KBD_BIN     -L 300     -H "$KBD_HEIGHT"     -R 12     --fn "$KBD_FONT"     --alpha 175     --bg-alpha 235     --bg 1e1e2e     --fg 313244     --fg-sp 45475a     --text cdd6f4     --text-sp cba6f7     --press cba6f7     --text-press 1e1e2e     --double-space-period $EXTRA_ARGS     >/dev/null 2>&1 &
 
 sleep 0.1
 ~/.local/bin/fit-agent-window >/dev/null 2>&1 &

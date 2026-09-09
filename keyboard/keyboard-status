@@ -7,7 +7,7 @@ if [ -f "$HOME/.config/wvkbd-mode" ]; then
 fi
 
 IS_OPEN="off"
-if pgrep -f "wvkbd-(deskintl|mobintl)" >/dev/null 2>&1; then
+if pgrep -x "wvkbd-deskintl" >/dev/null 2>&1 || pgrep -x "wvkbd-mobintl" >/dev/null 2>&1; then
     IS_OPEN="on"
 fi
 

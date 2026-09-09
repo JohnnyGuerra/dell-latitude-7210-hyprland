@@ -4,7 +4,7 @@ Hardware Folio-Aware Auto-Rotation & Dynamic Scratchpad Resizer
 Dell Latitude 7210 2-in-1 under Hyprland
 - Zero polling: Pure event-driven D-Bus signals from iio-sensor-proxy
 - Folio keyboard detection (/sys/bus/usb/devices/1-4)
-- Immediate rotation and atomic fit-agent-window scratchpad resize
+- Immediate rotation, atomic fit-agent-window scratchpad resize & touch gestures orientation sync
 """
 
 import os
@@ -60,6 +60,11 @@ def apply_transform(tf):
     fit_script = os.path.expanduser("~/.local/bin/fit-agent-window")
     if os.path.isfile(fit_script):
         subprocess.run([fit_script], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # Sync touch gestures daemon with current orientation
+    touch_script = os.path.expanduser("~/.local/bin/touch-gestures")
+    if os.path.isfile(touch_script):
+        subprocess.run([touch_script, "rotate", str(tf)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 def on_properties_changed(connection, sender_name, object_path, interface_name, signal_name, parameters, user_data):
     if interface_name == 'org.freedesktop.DBus.Properties' and signal_name == 'PropertiesChanged':
