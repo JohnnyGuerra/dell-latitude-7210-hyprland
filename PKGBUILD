@@ -46,6 +46,7 @@ package() {
     install -Dm755 "keyboard/keyboard-mode-menu" "${pkgdir}/usr/bin/keyboard-mode-menu"
     install -Dm755 "keyboard/toggle-keyboard" "${pkgdir}/usr/bin/toggle-keyboard"
     install -Dm755 "gestures/touch-gestures" "${pkgdir}/usr/bin/touch-gestures"
+    install -Dm755 "gestures/touch-action" "${pkgdir}/usr/bin/touch-action"
     install -Dm755 "system/toggle-eco-mode" "${pkgdir}/usr/bin/toggle-eco-mode"
     install -Dm755 "system/toggle-refresh-rate" "${pkgdir}/usr/bin/toggle-refresh-rate"
     install -Dm755 "system/power/apply-rapl-limits" "${pkgdir}/usr/bin/apply-rapl-limits"

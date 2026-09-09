@@ -49,6 +49,7 @@ install -m 755 "${SCRIPT_DIR}/keyboard/keyboard-status" "${BIN_DIR}/keyboard-sta
 install -m 755 "${SCRIPT_DIR}/keyboard/keyboard-mode-menu" "${BIN_DIR}/keyboard-mode-menu"
 install -m 755 "${SCRIPT_DIR}/keyboard/toggle-keyboard" "${BIN_DIR}/toggle-keyboard"
 install -m 755 "${SCRIPT_DIR}/gestures/touch-gestures" "${BIN_DIR}/touch-gestures"
+install -m 755 "${SCRIPT_DIR}/gestures/touch-action" "${BIN_DIR}/touch-action"
 install -m 755 "${SCRIPT_DIR}/system/toggle-eco-mode" "${BIN_DIR}/toggle-eco-mode"
 install -m 755 "${SCRIPT_DIR}/system/toggle-refresh-rate" "${BIN_DIR}/toggle-refresh-rate"
 echo -e "${GREEN}  ✓ Helper scripts installed successfully.${RESET}"
