@@ -41,6 +41,7 @@ fi
 
 echo -e "${BLUE}[2/6] Installing tablet helper scripts to ~/.local/bin...${RESET}"
 install -m 755 "${SCRIPT_DIR}/auto-rotate/auto-rotate-daemon.py" "${BIN_DIR}/auto-rotate-daemon.py"
+install -m 755 "${SCRIPT_DIR}/auto-rotate/fit-agent-window" "${BIN_DIR}/fit-agent-window"
 install -m 755 "${SCRIPT_DIR}/waybar/slider-popup" "${BIN_DIR}/slider-popup"
 install -m 755 "${SCRIPT_DIR}/keyboard/keyboard-status" "${BIN_DIR}/keyboard-status"
 install -m 755 "${SCRIPT_DIR}/keyboard/keyboard-mode-menu" "${BIN_DIR}/keyboard-mode-menu"

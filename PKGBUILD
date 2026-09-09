@@ -39,6 +39,7 @@ package() {
 
     # Install binaries
     install -Dm755 "auto-rotate/auto-rotate-daemon.py" "${pkgdir}/usr/bin/auto-rotate-daemon"
+    install -Dm755 "auto-rotate/fit-agent-window" "${pkgdir}/usr/bin/fit-agent-window"
     install -Dm755 "waybar/slider-popup" "${pkgdir}/usr/bin/slider-popup"
     install -Dm755 "keyboard/keyboard-status" "${pkgdir}/usr/bin/keyboard-status"
     install -Dm755 "keyboard/keyboard-mode-menu" "${pkgdir}/usr/bin/keyboard-mode-menu"

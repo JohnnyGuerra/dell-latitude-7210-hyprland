@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Smart Scratchpad Geometry Fitter for Landscape & Portrait
+# Tuned for 54px touch-friendly Waybar (y=6 to 60)
+
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)}"
+SIG=$(ls -t "$XDG_RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
+[ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+
+# Read active transform as clean integer
+TRANSFORM=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].transform // 0')
+TRANSFORM=${TRANSFORM:-0}
+
+# Check if on-screen keyboard is currently running
+KB_OPEN=0
+pgrep -f 'wvkbd-(deskintl|mobintl)' >/dev/null 2>&1 && KB_OPEN=1
+
+# Waybar is 54px high at y=6 (ends at y=60).
+# Leave a clean 10px breathing margin below Waybar -> TARGET_Y=70.
+TARGET_Y=70
+
+if [ "$TRANSFORM" = "1" ] || [ "$TRANSFORM" = "3" ]; then
+    # =========================================================================
+    # PORTRAIT (Screen is 960 width x 1440 height)
+    # Left & Right margins: 10px -> Width = 940px (x=10 to 950)
+    # Top margin: 10px below Waybar -> y=70
+    # =========================================================================
+    TARGET_W=940
+    TARGET_X=10
+
+    if [ "$KB_OPEN" = "1" ]; then
+        # Keyboard top is at y=1040.
+        # Leave 10px margin above keyboard -> bottom of window at y=1030.
+        # Height = 1030 - 70 = 960px
+        TARGET_H=960
+    else
+        # Full height in portrait:
+        # Bottom of screen is 1440. Leave 14px bottom margin -> bottom at 1426.
+        # Height = 1426 - 70 = 1356px
+        TARGET_H=1356
+    fi
+else
+    # =========================================================================
+    # LANDSCAPE (Screen is 1440 width x 960 height)
+    # Left & Right margins: 10px -> Width = 1420px (x=10 to 1430)
+    # Top margin: 10px below Waybar -> y=70
+    # =========================================================================
+    TARGET_W=1420
+    TARGET_X=10
+
+    if [ "$KB_OPEN" = "1" ]; then
+        # Keyboard top is at y=660.
+        # Top at y=70, bottom at y=648 (12px gap above keyboard). Height = 578px
+        TARGET_H=578
+    else
+        # Full height in landscape:
+        # Bottom at y=946 (14px bottom margin). Height = 946 - 70 = 876px
+        TARGET_H=876
+    fi
+fi
+
+# Apply exact geometry to agent-terminal
+hyprctl repl "hl.dispatch(hl.dsp.window.resize({ x = $TARGET_W, y = $TARGET_H, relative = false, window = \"class:agent-terminal\" }))" >/dev/null 2>&1
+hyprctl repl "hl.dispatch(hl.dsp.window.move({ x = $TARGET_X, y = $TARGET_Y, window = \"class:agent-terminal\" }))" >/dev/null 2>&1
