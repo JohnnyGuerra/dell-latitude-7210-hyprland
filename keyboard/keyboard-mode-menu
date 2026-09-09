@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Keyboard Mode & Layout Selector for Waybar Long-Press / Right-Click
+
+if pidof wofi >/dev/null; then
+    killall wofi 2>/dev/null
+    exit 0
+fi
+
+CONFIG_FILE="$HOME/.config/wvkbd-mode"
+CURRENT="full"
+[ -f "$CONFIG_FILE" ] && CURRENT=$(cat "$CONFIG_FILE" | tr -d ' \n')
+
+M_FULL="  Full Width"
+M_RIGHT="  Right-Handed (One-Hand)"
+M_LEFT="  Left-Handed (One-Hand)"
+M_HIDE="󰈆  Hide Keyboard"
+
+if [ "$CURRENT" = "right" ]; then
+    M_RIGHT="  Right-Handed (One-Hand)  [Active]"
+elif [ "$CURRENT" = "left" ]; then
+    M_LEFT="  Left-Handed (One-Hand)  [Active]"
+else
+    M_FULL="  Full Width  [Active]"
+fi
+
+SELECTION=$(printf "%s\n%s\n%s\n%s" "$M_FULL" "$M_RIGHT" "$M_LEFT" "$M_HIDE" | wofi --dmenu --prompt "⌨️ Keyboard Mode" --lines 4 --width 360 --hide-scroll)
+
+case "$SELECTION" in
+    *"Full Width"*)
+        ~/.local/bin/toggle-keyboard full
+        ;;
+    *"Right-Handed"*)
+        ~/.local/bin/toggle-keyboard right
+        ;;
+    *"Left-Handed"*)
+        ~/.local/bin/toggle-keyboard left
+        ;;
+    *"Hide Keyboard"*)
+        killall -9 wvkbd-deskintl wvkbd-mobintl 2>/dev/null
+        pkill -RTMIN+1 waybar 2>/dev/null || true
+        ~/.local/bin/fit-agent-window &
+        ;;
+esac

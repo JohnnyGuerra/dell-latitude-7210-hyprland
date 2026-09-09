@@ -1,0 +1,411 @@
+#!/usr/bin/env python3
+"""
+Touch-Friendly Layer-Shell Volume & Brightness Slider Popup for 2-in-1 Tablet
+Features:
+- Sub-millisecond direct sysfs brightness writing with 1:1 percentage matching
+- Zero-lag non-blocking background AudioWorker thread with command coalescing
+- Immediate 60fps GTK touch tracking without subprocess blocking
+- Capacitive touch debouncing (prevents self-termination on rapid touch bounces)
+- Smooth horizontal centering and oversized 34px touch knob
+"""
+
+import sys
+import os
+import signal
+import subprocess
+import threading
+import queue
+import time
+
+# Ensure proper runtime environment for audio and display servers
+if "XDG_RUNTIME_DIR" not in os.environ:
+    os.environ["XDG_RUNTIME_DIR"] = f"/run/user/{os.getuid()}"
+
+now = time.time()
+PID_FILE = "/tmp/slider-popup.pid"
+mode = sys.argv[1] if len(sys.argv) > 1 else "volume"
+
+def is_pid_running(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+# Single-instance toggle & touch-debounce logic
+if os.path.exists(PID_FILE):
+    try:
+        with open(PID_FILE, "r") as f:
+            content = f.read().strip()
+        if ":" in content:
+            parts = content.split(":")
+            old_pid = int(parts[0])
+            old_mode = parts[1]
+            old_time = float(parts[2]) if len(parts) > 2 else 0.0
+
+            if is_pid_running(old_pid):
+                elapsed = now - old_time
+                if old_mode == mode and elapsed < 0.6:
+                    # Debounce rapid touch events / synthetic mouse release bounce
+                    sys.exit(0)
+
+                os.kill(old_pid, signal.SIGTERM)
+                if old_mode == mode:
+                    try:
+                        os.remove(PID_FILE)
+                    except Exception:
+                        pass
+                    sys.exit(0)
+        try:
+            os.remove(PID_FILE)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+try:
+    with open(PID_FILE, "w") as f:
+        f.write(f"{os.getpid()}:{mode}:{now}")
+except Exception:
+    pass
+
+import gi
+gi.require_version("Gtk", "3.0")
+gi.require_version("GtkLayerShell", "0.1")
+from gi.repository import Gtk, Gdk, GLib, GtkLayerShell
+
+SYSFS_BRIGHTNESS = "/sys/class/backlight/intel_backlight/brightness"
+SYSFS_MAX_BRIGHTNESS = "/sys/class/backlight/intel_backlight/max_brightness"
+
+MAX_BACKLIGHT = 120000
+try:
+    if os.path.exists(SYSFS_MAX_BRIGHTNESS):
+        with open(SYSFS_MAX_BRIGHTNESS, "r") as f:
+            MAX_BACKLIGHT = int(f.read().strip())
+except Exception:
+    MAX_BACKLIGHT = 120000
+
+# Minimum brightness level: 1% to prevent screen blackout on tablets
+MIN_BRIGHTNESS = 1
+MIN_VAL = MIN_BRIGHTNESS if mode == "brightness" else 0
+
+class AudioWorker(threading.Thread):
+    """
+    Dedicated non-blocking background thread for PipeWire/PulseAudio volume adjustments.
+    Coalesces rapid slider move events so the GTK main UI thread NEVER lags or blocks.
+    """
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.queue = queue.Queue(maxsize=1)
+        self.current_val = -1
+        self.muted = False
+        self.running = True
+
+    def set_volume(self, val):
+        try:
+            self.queue.get_nowait()
+        except queue.Empty:
+            pass
+        self.queue.put(val)
+
+    def stop(self):
+        self.running = False
+        try:
+            self.queue.get_nowait()
+        except queue.Empty:
+            pass
+        self.queue.put(None)
+
+    def run(self):
+        while self.running:
+            try:
+                val = self.queue.get(timeout=0.1)
+            except queue.Empty:
+                continue
+            if val is None or not self.running:
+                break
+            if val != self.current_val:
+                self.current_val = val
+                # Auto-unmute if muted and volume dragged up
+                if self.muted and val > 0:
+                    subprocess.run(["pactl", "set-sink-mute", "@DEFAULT_SINK@", "0"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    self.muted = False
+                # Fast single pactl update
+                subprocess.run(["pactl", "set-sink-volume", "@DEFAULT_SINK@", f"{val}%"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.queue.task_done()
+
+def cleanup(*args):
+    if os.path.exists(PID_FILE):
+        try:
+            os.remove(PID_FILE)
+        except Exception:
+            pass
+    Gtk.main_quit()
+
+signal.signal(signal.SIGINT, cleanup)
+signal.signal(signal.SIGTERM, cleanup)
+
+def get_current_value(m):
+    if m == "volume":
+        try:
+            out = subprocess.check_output(["pactl", "get-sink-volume", "@DEFAULT_SINK@"]).decode()
+            for tok in out.split():
+                if tok.endswith("%"):
+                    val = int(tok.rstrip("%"))
+                    try:
+                        mute_out = subprocess.check_output(["pactl", "get-sink-mute", "@DEFAULT_SINK@"]).decode()
+                        muted = "yes" in mute_out.lower()
+                    except Exception:
+                        muted = False
+                    return min(max(val, 0), 100), muted
+        except Exception:
+            pass
+        try:
+            out = subprocess.check_output(["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]).decode()
+            parts = out.strip().split()
+            val = int(float(parts[1]) * 100)
+            muted = "[MUTED]" in out
+            return min(max(val, 0), 100), muted
+        except Exception:
+            return 50, False
+    else:
+        try:
+            if os.path.exists(SYSFS_BRIGHTNESS):
+                with open(SYSFS_BRIGHTNESS, "r") as f:
+                    cur = int(f.read().strip())
+                pct = round((cur * 100) / MAX_BACKLIGHT)
+                return min(max(pct, MIN_BRIGHTNESS), 100), False
+        except Exception:
+            pass
+        try:
+            cur = int(subprocess.check_output(["brightnessctl", "get"]).decode().strip())
+            mx = int(subprocess.check_output(["brightnessctl", "max"]).decode().strip())
+            pct = round((cur * 100) / mx)
+            return min(max(pct, MIN_BRIGHTNESS), 100), False
+        except Exception:
+            return 50, False
+
+class SliderPopup(Gtk.Window):
+    def __init__(self, mode):
+        super().__init__()
+        self.mode = mode
+        self.min_val = MIN_VAL
+        self.val, self.muted = get_current_value(mode)
+        self.last_applied_val = self.val
+
+        # Setup audio worker or brightness sysfs file
+        if self.mode == "volume":
+            self.audio_worker = AudioWorker()
+            self.audio_worker.muted = self.muted
+            self.audio_worker.current_val = self.val
+            self.audio_worker.start()
+            self.brightness_file = None
+        else:
+            self.audio_worker = None
+            try:
+                self.brightness_file = open(SYSFS_BRIGHTNESS, "r+")
+            except Exception:
+                self.brightness_file = None
+
+        # LayerShell setup
+        GtkLayerShell.init_for_window(self)
+        GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
+        GtkLayerShell.set_namespace(self, "slider-popup")
+        
+        # Center horizontally directly under Waybar
+        GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.TOP, True)
+        GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.BOTTOM, False)
+        GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.LEFT, False)
+        GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, False)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, 72)
+        GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
+
+        self.connect("destroy", self.on_window_destroy)
+        self.connect("key-press-event", self.on_key_press)
+
+        # Main Container
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+        box.set_name("popup-box")
+
+        # Icon
+        self.icon_label = Gtk.Label()
+        self.icon_label.set_name("icon-label")
+        box.pack_start(self.icon_label, False, False, 0)
+
+        # Slider (Gtk.Scale) with strict lower bound matching hardware minimum
+        self.adj = Gtk.Adjustment(value=self.val, lower=self.min_val, upper=100, step_increment=1, page_increment=5)
+        self.scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=self.adj)
+        self.scale.set_name("touch-slider")
+        self.scale.set_draw_value(False)
+        self.scale.set_hexpand(True)
+        self.scale.connect("value-changed", self.on_slider_changed)
+        box.pack_start(self.scale, True, True, 0)
+
+        # Value text
+        self.val_label = Gtk.Label()
+        self.val_label.set_name("val-label")
+        self.val_label.set_width_chars(5)
+        box.pack_start(self.val_label, False, False, 0)
+
+        # Close button (touch-friendly ✕)
+        close_btn = Gtk.Button(label="✕")
+        close_btn.set_name("close-btn")
+        close_btn.connect("clicked", lambda b: self.close())
+        box.pack_start(close_btn, False, False, 0)
+
+        self.update_ui(self.val)
+        self.add(box)
+
+        # Styling
+        accent_color = b"#a6e3a1" if mode == "volume" else b"#f9e2af"
+        css = b"""
+        window {
+            background: transparent;
+        }
+        #popup-box {
+            background-color: rgba(24, 24, 37, 0.98);
+            border: 2.5px solid """ + accent_color + b""";
+            border-radius: 20px;
+            padding: 12px 24px;
+            box-shadow: 0 10px 32px rgba(0, 0, 0, 0.75);
+            min-width: 380px;
+            min-height: 64px;
+        }
+        #icon-label {
+            font-size: 26px;
+            color: """ + accent_color + b""";
+            min-width: 32px;
+        }
+        #val-label {
+            font-size: 18px;
+            font-weight: bold;
+            color: #cdd6f4;
+            min-width: 50px;
+        }
+        #close-btn {
+            background-color: rgba(69, 71, 90, 0.6);
+            color: #cdd6f4;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 4px 10px;
+            min-width: 34px;
+            min-height: 34px;
+            border: none;
+        }
+        #close-btn:active {
+            background-color: #f38ba8;
+            color: #11111b;
+        }
+        #touch-slider trough {
+            min-height: 20px;
+            min-width: 220px;
+            border-radius: 10px;
+            background-color: rgba(69, 71, 90, 0.85);
+        }
+        #touch-slider highlight {
+            min-height: 20px;
+            border-radius: 10px;
+            background-color: """ + accent_color + b""";
+        }
+        #touch-slider slider {
+            min-width: 34px;
+            min-height: 34px;
+            margin: -7px 0;
+            border-radius: 50%;
+            background-color: #ffffff;
+            border: 3px solid #1e1e2e;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
+        }
+        """
+        provider = Gtk.CssProvider()
+        provider.load_from_data(css)
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+        # Auto-dismiss timer (4.5 seconds idle)
+        self.timer_id = GLib.timeout_add(4500, self.auto_dismiss)
+
+    def on_window_destroy(self, widget):
+        if self.audio_worker:
+            self.audio_worker.stop()
+        if self.brightness_file:
+            try:
+                self.brightness_file.close()
+            except Exception:
+                pass
+        cleanup()
+
+    def reset_timer(self):
+        if self.timer_id:
+            GLib.source_remove(self.timer_id)
+        self.timer_id = GLib.timeout_add(4500, self.auto_dismiss)
+
+    def auto_dismiss(self):
+        self.close()
+        return False
+
+    def on_key_press(self, widget, event):
+        if event.keyval == Gdk.KEY_Escape:
+            self.close()
+            return True
+        return False
+
+    def update_ui(self, val):
+        self.val_label.set_text(f"{int(val)}%")
+        if self.mode == "volume":
+            if val == 0:
+                ico = "󰝟"
+            elif val < 30:
+                ico = "󰕿"
+            elif val < 70:
+                ico = "󰖀"
+            else:
+                ico = "󰕾"
+        else:
+            if val < 40:
+                ico = "󰃞"
+            elif val < 75:
+                ico = "󰃟"
+            else:
+                ico = "󰃠"
+        self.icon_label.set_text(ico)
+
+    def on_slider_changed(self, scale):
+        val = int(self.adj.get_value())
+        val = max(val, self.min_val)
+        if val != self.last_applied_val:
+            self.last_applied_val = val
+            self.update_ui(val)
+            
+            # Non-blocking instant execution
+            if self.mode == "volume":
+                self.audio_worker.set_volume(val)
+            else:
+                if self.brightness_file:
+                    try:
+                        raw = round((val * MAX_BACKLIGHT) / 100)
+                        self.brightness_file.seek(0)
+                        self.brightness_file.write(str(raw))
+                        self.brightness_file.truncate()
+                        self.brightness_file.flush()
+                    except Exception:
+                        subprocess.run(["brightnessctl", "set", f"{val}%"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                else:
+                    subprocess.run(["brightnessctl", "set", f"{val}%"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        self.reset_timer()
+
+def main():
+    try:
+        win = SliderPopup(mode)
+        win.show_all()
+        Gtk.main()
+    except Exception:
+        pass
+
+if __name__ == "__main__":
+    main()

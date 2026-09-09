@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Toggle "Magic Eco Mode" (3.2W All-Day Battery Profile) on Dell Latitude 7210 2-in-1
+
+MONITOR="eDP-1"
+SCALE="1.33"
+
+# Read current transform if any
+CURRENT_TRANSFORM=$(hyprctl monitors -j | grep -o '"transform": [0-9]' | head -1 | awk '{print $2}')
+CURRENT_TRANSFORM=${CURRENT_TRANSFORM:-0}
+
+# Read current refresh rate
+CURRENT_HZ=$(hyprctl monitors -j | grep -o '"refreshRate": [0-9.]*' | head -1 | awk '{print int($2)}')
+CURRENT_HZ=${CURRENT_HZ:-60}
+
+# Read current brightness percent
+CURRENT_BRI=$(brightnessctl -m | awk -F, '{print substr($4, 1, length($4)-1)}')
+CURRENT_BRI=${CURRENT_BRI:-50}
+
+# State check: If we are already at 48Hz and low brightness, toggle to Standard Mode
+if [ "$CURRENT_HZ" -le 50 ] && [ "$CURRENT_BRI" -le 40 ]; then
+    # Switch to Standard Mode
+    hyprctl eval "hl.monitor({ output = '$MONITOR', mode = '1920x1280@60.005', position = '0x0', scale = '$SCALE', transform = $CURRENT_TRANSFORM })"
+    brightnessctl set 60%
+    notify-send -t 2000 -i battery-charging "Power Profile" "⚡ Standard Mode: 60 Hz | 60% Brightness" 2>/dev/null || true
+else
+    # Switch to Magic Eco Mode
+    hyprctl eval "hl.monitor({ output = '$MONITOR', mode = '1920x1280@48.00Hz', position = '0x0', scale = '$SCALE', transform = $CURRENT_TRANSFORM })"
+    brightnessctl set 35%
+    notify-send -t 2500 -i battery-good "Power Profile" "🔋 Magic Eco Mode: 48 Hz | 35% Brightness (~3.2W / 8+ hrs)" 2>/dev/null || true
+fi
