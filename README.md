@@ -60,9 +60,26 @@ Running Hyprland or Wayland compositors on convertible 2-in-1 laptops often resu
 
 ---
 
-## 🚀 Quick Start (Automated Install)
+## 🚀 Quick Start & Installation
 
-Clone the repository and run the installer:
+### Option A: Native Arch Linux Package (`makepkg -si`) — Recommended
+
+Build and install as a native Arch package managed by `pacman`:
+
+```bash
+git clone https://github.com/JohnnyGuerra/dell-latitude-7210-hyprland.git
+cd dell-latitude-7210-hyprland
+makepkg -si
+```
+
+Enable the auto-rotation user service:
+```bash
+systemctl --user enable --now auto-rotate.service
+```
+
+### Option B: Standalone Shell Installer
+
+If you prefer installing scripts directly into `~/.local/bin/` without pacman:
 
 ```bash
 git clone https://github.com/JohnnyGuerra/dell-latitude-7210-hyprland.git
