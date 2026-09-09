@@ -68,6 +68,6 @@ hl.animation({ leaf = "layersOut",     enabled = true,  speed = 3,    bezier = "
 hl.layer_rule({
     name = "slider-popup-anim",
     match = "slider-popup",
-    animation = "slidevert",
+    animation = "noanim",
     blur = true,
 })

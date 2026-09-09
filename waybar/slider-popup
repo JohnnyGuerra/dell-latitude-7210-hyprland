@@ -5,8 +5,8 @@ Supports both Touch Tablet and Folio Trackpad / Mouse on Dell Latitude 7210 2-in
 
 Features:
 - Vertical capsule card sliding smoothly OUT FROM BEHIND the Waybar button
+- Custom GTK-driven vertical drop animation (bypasses Hyprland layer animation)
 - Slides smoothly BACK IN underneath the button when toggled or dismissed
-- Hyprland layer-shell animation (slide top)
 - Live PipeWire / sysfs hardware synchronization
 - Background AudioWorker to guarantee zero UI thread lag
 - Interactive mute toggle (audio) & step cycling (brightness) on bottom icon
@@ -21,6 +21,7 @@ import subprocess
 import time
 import threading
 import queue
+import math
 import gi
 
 gi.require_version('Gtk', '3.0')
@@ -96,6 +97,23 @@ except Exception:
 
 MIN_BRIGHTNESS = 1
 MIN_VAL = MIN_BRIGHTNESS if mode == "brightness" else 0
+
+# ─── Animation constants ─────────────────────────────────────────
+ANIM_DURATION_MS = 300       # Total animation time
+ANIM_FRAME_MS = 16           # ~60fps frame interval
+MARGIN_TOP_HIDDEN = 0        # Start: hidden behind Waybar (top edge)
+MARGIN_TOP_VISIBLE = 66      # End: fully visible below Waybar
+
+
+def ease_out_cubic(t):
+    """Cubic ease-out: fast start, smooth deceleration"""
+    return 1.0 - (1.0 - t) ** 3
+
+
+def ease_in_cubic(t):
+    """Cubic ease-in: slow start, accelerating exit"""
+    return t ** 3
+
 
 class AudioWorker(threading.Thread):
     """
@@ -194,6 +212,7 @@ class SliderPopup(Gtk.Window):
         self.val, self.muted = get_current_value(mode)
         self.last_applied_val = self.val
         self.is_closing = False
+        self.anim_timer_id = None
 
         if mode == "volume":
             self.audio_worker = AudioWorker()
@@ -217,7 +236,7 @@ class SliderPopup(Gtk.Window):
 
         # LayerShell setup
         # Layer.TOP places the popup directly behind Waybar (which is Layer.OVERLAY),
-        # allowing the slider to slide OUT from behind the Waybar button, and slide back in!
+        # so when the slider drops down it appears to emerge from behind the Waybar button.
         GtkLayerShell.init_for_window(self)
         GtkLayerShell.set_layer(self, GtkLayerShell.Layer.TOP)
         GtkLayerShell.set_namespace(self, "slider-popup")
@@ -225,15 +244,16 @@ class SliderPopup(Gtk.Window):
         # Alignment directly dropping from the respective button:
         # Volume button center: ~401 margin_right
         # Brightness button center: ~328 margin_right
-        margin_r = 401 if mode == "volume" else 328
+        self.margin_r = 401 if mode == "volume" else 328
 
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.TOP, True)
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.BOTTOM, False)
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, True)
         GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.LEFT, False)
 
-        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, 66)
-        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, margin_r)
+        # Start HIDDEN behind Waybar (margin_top = 0, fully tucked under the bar)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, MARGIN_TOP_HIDDEN)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, self.margin_r)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
 
         self.connect("destroy", self.on_window_destroy)
@@ -404,14 +424,69 @@ class SliderPopup(Gtk.Window):
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
 
-        # Auto-dismiss timer (4.5 seconds idle)
-        self.timer_id = GLib.timeout_add(4500, self.auto_dismiss)
+        # Auto-dismiss timer (4.5 seconds idle) — started after open animation completes
+        self.timer_id = None
 
+    # ─── Custom vertical slide animation ─────────────────────────
+    def start_open_animation(self):
+        """
+        Animate the popup sliding DOWN from behind Waybar.
+        margin-top goes from MARGIN_TOP_HIDDEN (0) → MARGIN_TOP_VISIBLE (66)
+        using cubic ease-out for a smooth deceleration feel.
+        """
+        self.anim_start_time = time.monotonic()
+        self.anim_from = MARGIN_TOP_HIDDEN
+        self.anim_to = MARGIN_TOP_VISIBLE
+        self.anim_ease = ease_out_cubic
+        self.anim_timer_id = GLib.timeout_add(ANIM_FRAME_MS, self._tick_open)
+
+    def _tick_open(self):
+        elapsed = (time.monotonic() - self.anim_start_time) * 1000  # ms
+        t = min(elapsed / ANIM_DURATION_MS, 1.0)
+        eased = self.anim_ease(t)
+        current_margin = int(self.anim_from + (self.anim_to - self.anim_from) * eased)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, current_margin)
+
+        if t >= 1.0:
+            # Animation complete — start auto-dismiss timer
+            self.anim_timer_id = None
+            self.timer_id = GLib.timeout_add(4500, self.auto_dismiss)
+            return False  # Stop timer
+        return True  # Continue
+
+    def _start_close_animation(self):
+        """
+        Animate the popup sliding UP back behind Waybar.
+        margin-top goes from MARGIN_TOP_VISIBLE (66) → MARGIN_TOP_HIDDEN (0)
+        using cubic ease-in for an accelerating exit feel.
+        """
+        self.anim_start_time = time.monotonic()
+        self.anim_from = MARGIN_TOP_VISIBLE
+        self.anim_to = MARGIN_TOP_HIDDEN
+        self.anim_ease = ease_in_cubic
+        self.anim_timer_id = GLib.timeout_add(ANIM_FRAME_MS, self._tick_close)
+
+    def _tick_close(self):
+        elapsed = (time.monotonic() - self.anim_start_time) * 1000  # ms
+        t = min(elapsed / ANIM_DURATION_MS, 1.0)
+        eased = self.anim_ease(t)
+        current_margin = int(self.anim_from + (self.anim_to - self.anim_from) * eased)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, current_margin)
+
+        if t >= 1.0:
+            # Animation complete — destroy window and quit
+            self.anim_timer_id = None
+            self.destroy()
+            GLib.timeout_add(50, Gtk.main_quit)
+            return False  # Stop timer
+        return True  # Continue
+
+    # ─── Close / dismiss ──────────────────────────────────────────
     def close_animated(self):
         """
-        Smooth slide-out exit animation:
-        Unmaps the Wayland surface so Hyprland plays layersOut (sliding back in behind Waybar),
-        then cleanly terminates the process after the animation finishes.
+        Smooth slide-up exit animation:
+        Slides the popup back UP behind Waybar using our custom GTK animation,
+        then cleanly terminates the process.
         """
         if self.is_closing:
             return
@@ -427,10 +502,13 @@ class SliderPopup(Gtk.Window):
             GLib.source_remove(self.timer_id)
             self.timer_id = None
 
-        # Unmap window so Hyprland triggers layersOut slide animation
-        self.destroy()
-        # Keep GTK main loop alive for 400ms to allow Hyprland to finish the slide-out
-        GLib.timeout_add(400, Gtk.main_quit)
+        # Cancel any running open animation
+        if self.anim_timer_id:
+            GLib.source_remove(self.anim_timer_id)
+            self.anim_timer_id = None
+
+        # Start close (slide-up) animation
+        self._start_close_animation()
 
     def on_window_destroy(self, widget):
         if self.brightness_file:
@@ -549,6 +627,8 @@ signal.signal(signal.SIGINT, handle_sigterm)
 def main():
     win = SliderPopup(mode)
     win.show_all()
+    # Start the custom open (slide-down) animation
+    win.start_open_animation()
     Gtk.main()
 
 if __name__ == "__main__":
