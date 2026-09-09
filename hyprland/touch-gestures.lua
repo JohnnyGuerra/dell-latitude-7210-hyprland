@@ -59,3 +59,15 @@ hl.gesture({
         end
     }
 })
+
+-- Animated vertical sliders dropping from top bar buttons
+hl.animation({ leaf = "layers",        enabled = true,  speed = 4,    spring = "easy",         style = "slidevert" })
+hl.animation({ leaf = "layersIn",      enabled = true,  speed = 4,    spring = "easy",         style = "slidevert" })
+hl.animation({ leaf = "layersOut",     enabled = true,  speed = 3,    bezier = "almostLinear", style = "slidevert" })
+
+hl.layer_rule({
+    name = "slider-popup-anim",
+    match = "slider-popup",
+    animation = "slidevert",
+    blur = true,
+})
