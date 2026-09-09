@@ -1,6 +1,6 @@
 pkgbase = dell-latitude-7210-hyprland-git
-	pkgdesc = Turnkey, touch-optimized Hyprland tablet suite for Dell Latitude 7210 2-in-1 on Arch Linux
-	pkgver = r1.a6f3beb
+	pkgdesc = Turnkey, touch-optimized Hyprland tablet suite & power management for Dell Latitude 7210 2-in-1 on Arch Linux
+	pkgver = r2.6bd03c1
 	pkgrel = 1
 	url = https://github.com/JohnnyGuerra/dell-latitude-7210-hyprland
 	arch = any
@@ -16,6 +16,7 @@ pkgbase = dell-latitude-7210-hyprland-git
 	depends = libpulse
 	depends = wireplumber
 	depends = pipewire
+	optdepends = tlp: advanced Linux power and battery life management
 	optdepends = wvkbd: on-screen keyboard with one-handed docking support
 	optdepends = wofi: application and keyboard mode launcher
 	provides = dell-latitude-7210-hyprland

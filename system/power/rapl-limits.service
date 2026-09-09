@@ -1,0 +1,11 @@
+[Unit]
+Description=Apply Intel RAPL Power Limits (PL1/PL2) for Tablet Power Management
+After=multi-user.target tlp.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/apply-rapl-limits
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

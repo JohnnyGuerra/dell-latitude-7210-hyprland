@@ -51,12 +51,28 @@ Running Hyprland or Wayland compositors on convertible 2-in-1 laptops often resu
   - **Tap**: Toggle on/off.
   - **Right-Tap / Double-Tap**: Open Wofi mode selector.
 
-### 4. System Tuning & Battery Optimization (`system/`)
-- **Backlight Udev Rule (`90-backlight.rules`)**: Grants unprivileged write access to the Intel backlight node.
-- **Magic Eco-Mode (`toggle-eco-mode`)**:
-  - Sets Intel CPU governor to `powersave`.
-  - Configures energy-performance preference (EPP) to `power`.
-  - Lowers refresh rate and dims display to extend battery life beyond 7+ hours.
+### 4. System Tuning & Power Management Suite (`system/`)
+The Dell Latitude 7210 2-in-1 is notorious for firmware sleep hangs and aggressive thermal throttling under Linux without proper tuning. This suite includes the complete battle-tested power stack:
+
+- **Rock-Solid Sleep (`suspend-then-hibernate.conf`)**:
+  - Dell Latitude 7210 UEFI firmware hangs when entering or waking from standard deep ACPI S3 sleep.
+  - Fix: Configures `s2idle` initial suspend with a 30-minute transition timeout to NVMe swapfile via `systemd-suspend-then-hibernate` (verified 75h+ standby retention with ~1% total battery loss, 0 firmware hangs).
+- **Folio Clamshell Lid Switch (`lid_switch.conf`)**:
+  - Properly hooks the Dell magnetic folio close event to `suspend-then-hibernate`.
+- **Intel RAPL Power Clamping (`apply-rapl-limits` + `rapl-limits.service`)**:
+  - Clamps Running Average Power Limits (PL1/PL2) for the 10th-Gen Intel Core i7-10610U:
+    - **Battery**: 10W PL1 sustained / 15W PL2 burst (eliminates fan noise and thermal throttling in tablet mode).
+    - **AC Mains**: 15W PL1 sustained / 25W PL2 burst.
+- **Battery Preservation TLP Profile (`tlp-7210.conf`)**:
+  - Dell battery charge thresholds (stops charging at 80% to preserve lithium health, resumes below 75%).
+  - Intel UHD Graphics frequency capping on battery (300MHz min, 700MHz max).
+  - PCIe ASPM powersave policy.
+- **Display Refresh Rate Switcher (`toggle-refresh-rate`)**:
+  - Toggles the Sharp 1920x1280 panel between **60Hz** (smooth) and **48Hz** (battery saver, saving ~0.4W continuously).
+- **3.2W Magic Eco-Mode (`toggle-eco-mode`)**:
+  - Dynamic CPU governor (`powersave`), EPP (`power`), and backlight level toggling extending battery life beyond 7+ hours.
+- **Backlight Udev Rule (`90-backlight.rules`)**:
+  - Unprivileged write access to `/sys/class/backlight/%k/brightness` for instant 0.01ms slider adjustments.
 
 ---
 

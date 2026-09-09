@@ -1,8 +1,8 @@
 # Maintainer: Johnny Guerra <johnny.guerra@gmail.com>
 pkgname=dell-latitude-7210-hyprland-git
-pkgver=r1.a6f3beb
+pkgver=r2.6bd03c1
 pkgrel=1
-pkgdesc="Turnkey, touch-optimized Hyprland tablet suite for Dell Latitude 7210 2-in-1 on Arch Linux"
+pkgdesc="Turnkey, touch-optimized Hyprland tablet suite & power management for Dell Latitude 7210 2-in-1 on Arch Linux"
 arch=('any')
 url="https://github.com/JohnnyGuerra/dell-latitude-7210-hyprland"
 license=('MIT')
@@ -19,6 +19,7 @@ depends=(
     'pipewire'
 )
 optdepends=(
+    'tlp: advanced Linux power and battery life management'
     'wvkbd: on-screen keyboard with one-handed docking support'
     'wofi: application and keyboard mode launcher'
 )
@@ -43,18 +44,24 @@ package() {
     install -Dm755 "keyboard/keyboard-mode-menu" "${pkgdir}/usr/bin/keyboard-mode-menu"
     install -Dm755 "keyboard/toggle-keyboard" "${pkgdir}/usr/bin/toggle-keyboard"
     install -Dm755 "system/toggle-eco-mode" "${pkgdir}/usr/bin/toggle-eco-mode"
+    install -Dm755 "system/toggle-refresh-rate" "${pkgdir}/usr/bin/toggle-refresh-rate"
+    install -Dm755 "system/power/apply-rapl-limits" "${pkgdir}/usr/bin/apply-rapl-limits"
 
-    # Install systemd user service
+    # Install systemd services
     install -Dm644 "auto-rotate/auto-rotate.service" "${pkgdir}/usr/lib/systemd/user/auto-rotate.service"
     sed -i 's|%h/.local/bin/auto-rotate-daemon.py|/usr/bin/auto-rotate-daemon|g' "${pkgdir}/usr/lib/systemd/user/auto-rotate.service"
+    install -Dm644 "system/power/rapl-limits.service" "${pkgdir}/usr/lib/systemd/system/rapl-limits.service"
 
-    # Install udev rules
+    # Install udev and power management configs
     install -Dm644 "system/90-backlight.rules" "${pkgdir}/usr/lib/udev/rules.d/90-backlight.rules"
+    install -Dm644 "system/power/suspend-then-hibernate.conf" "${pkgdir}/usr/lib/systemd/sleep.conf.d/7210-suspend-then-hibernate.conf"
+    install -Dm644 "system/power/lid_switch.conf" "${pkgdir}/usr/lib/systemd/logind.conf.d/7210-lid-switch.conf"
 
-    # Install Waybar & Hyprland config presets
+    # Install Waybar, Hyprland, and TLP presets
     install -Dm644 "waybar/config.jsonc" "${pkgdir}/usr/share/dell-latitude-7210-hyprland/waybar/config.jsonc"
     install -Dm644 "waybar/style.css" "${pkgdir}/usr/share/dell-latitude-7210-hyprland/waybar/style.css"
     install -Dm644 "hyprland/touch-gestures.conf" "${pkgdir}/usr/share/dell-latitude-7210-hyprland/hyprland/touch-gestures.conf"
+    install -Dm644 "system/power/tlp-7210.conf" "${pkgdir}/usr/share/dell-latitude-7210-hyprland/system/power/tlp-7210.conf"
 
     # Install documentation and license
     install -Dm644 "README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
