@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Clean Dispatcher for Touch Gestures on Hyprland 0.56+
 export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)}"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | grep -v '\.lock$' | head -n 1 | xargs -r basename)}"
 SIG=$(ls -t "$XDG_RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
 [ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
 

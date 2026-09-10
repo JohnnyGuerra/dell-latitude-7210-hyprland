@@ -11,7 +11,7 @@ SELECTION=$(printf "󰜺  Cancel / Keep Working\n󰍃  Exit Session (Logout)\n�
 
 case "$SELECTION" in
     *"Exit Session (Logout)"*)
-        command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl dispatch exit
+        command -v hyprshutdown >/dev/null 2>&1 && hyprshutdown || hyprctl eval 'hl.dispatch(hl.dsp.exit())' 2>/dev/null || hyprctl dispatch exit
         ;;
     *"Suspend System"*)
         systemctl suspend

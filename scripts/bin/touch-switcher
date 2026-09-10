@@ -71,5 +71,5 @@ SELECTED=$(echo "$WINDOWS" | wofi \
 # Extract address
 ADDR=$(echo "$SELECTED" | awk -F ':: ' '{print $2}' | tr -d ' ')
 if [ -n "$ADDR" ]; then
-    hyprctl dispatch focuswindow "address:$ADDR"
+    hyprctl eval "hl.dispatch(hl.dsp.focus({ window = 'address:$ADDR' }))" 2>/dev/null || hyprctl dispatch "focuswindow, address:$ADDR"
 fi

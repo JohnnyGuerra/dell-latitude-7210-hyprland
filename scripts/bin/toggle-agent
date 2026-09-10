@@ -8,4 +8,4 @@ if command -v hyprctl &>/dev/null; then
     fi
 fi
 
-hyprctl dispatch 'hl.dsp.workspace.toggle_special("agent")' 2>/dev/null || hyprctl dispatch togglespecialworkspace agent
+hyprctl eval 'hl.dispatch(hl.dsp.workspace.toggle_special("agent"))' 2>/dev/null || hyprctl dispatch 'togglespecialworkspace, agent'
