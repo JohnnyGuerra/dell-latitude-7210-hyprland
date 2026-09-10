@@ -1,0 +1,635 @@
+#!/usr/bin/env python3
+"""
+Hardware-Synchronized Animated Vertical Slider Popup for Hyprland
+Supports both Touch Tablet and Folio Trackpad / Mouse on Dell Latitude 7210 2-in-1
+
+Features:
+- Vertical capsule card sliding smoothly OUT FROM BEHIND the Waybar button
+- Custom GTK-driven vertical drop animation (bypasses Hyprland layer animation)
+- Slides smoothly BACK IN underneath the button when toggled or dismissed
+- Live PipeWire / sysfs hardware synchronization
+- Background AudioWorker to guarantee zero UI thread lag
+- Interactive mute toggle (audio) & step cycling (brightness) on bottom icon
+- Debounced touch singleton with animated toggle-to-close behavior
+- 32-bit RGBA transparency with Catppuccin Mocha theme & accent glow
+"""
+
+import sys
+import os
+import signal
+import subprocess
+import time
+import threading
+import queue
+import math
+import gi
+
+gi.require_version('Gtk', '3.0')
+gi.require_version('GtkLayerShell', '0.1')
+from gi.repository import Gtk, Gdk, GLib, GtkLayerShell
+
+mode = sys.argv[1] if len(sys.argv) > 1 and sys.argv[1] in ("brightness", "volume") else "volume"
+
+PID_FILE = "/tmp/slider-popup.pid"
+now = time.time()
+
+def is_pid_running(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+# Single-instance animated toggle & touch-debounce logic
+if os.path.exists(PID_FILE):
+    try:
+        with open(PID_FILE, "r") as f:
+            content = f.read().strip()
+        if ":" in content:
+            parts = content.split(":")
+            old_pid = int(parts[0])
+            old_mode = parts[1]
+            old_time = float(parts[2]) if len(parts) > 2 else 0.0
+
+            if is_pid_running(old_pid):
+                elapsed = now - old_time
+                if old_mode == mode and elapsed < 0.35:
+                    # Debounce rapid touch bounce
+                    sys.exit(0)
+
+                if old_mode == mode:
+                    # Toggling same module: send SIGUSR1 to trigger smooth slide-out exit animation
+                    try:
+                        os.kill(old_pid, signal.SIGUSR1)
+                    except Exception:
+                        os.kill(old_pid, signal.SIGTERM)
+                    sys.exit(0)
+                else:
+                    # Switching to different module: close old and continue
+                    try:
+                        os.kill(old_pid, signal.SIGTERM)
+                    except Exception:
+                        pass
+                    time.sleep(0.1)
+        try:
+            os.remove(PID_FILE)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+try:
+    with open(PID_FILE, "w") as f:
+        f.write(f"{os.getpid()}:{mode}:{now}")
+except Exception:
+    pass
+
+SYSFS_BRIGHTNESS = "/sys/class/backlight/intel_backlight/brightness"
+SYSFS_MAX_BRIGHTNESS = "/sys/class/backlight/intel_backlight/max_brightness"
+
+MAX_BACKLIGHT = 120000
+try:
+    if os.path.exists(SYSFS_MAX_BRIGHTNESS):
+        with open(SYSFS_MAX_BRIGHTNESS, "r") as f:
+            MAX_BACKLIGHT = int(f.read().strip())
+except Exception:
+    MAX_BACKLIGHT = 120000
+
+MIN_BRIGHTNESS = 1
+MIN_VAL = MIN_BRIGHTNESS if mode == "brightness" else 0
+
+# ─── Animation constants ─────────────────────────────────────────
+ANIM_DURATION_MS = 300       # Total animation time
+ANIM_FRAME_MS = 16           # ~60fps frame interval
+MARGIN_TOP_HIDDEN = 0        # Start: hidden behind Waybar (top edge)
+MARGIN_TOP_VISIBLE = 66      # End: fully visible below Waybar
+
+
+def ease_out_cubic(t):
+    """Cubic ease-out: fast start, smooth deceleration"""
+    return 1.0 - (1.0 - t) ** 3
+
+
+def ease_in_cubic(t):
+    """Cubic ease-in: slow start, accelerating exit"""
+    return t ** 3
+
+
+class AudioWorker(threading.Thread):
+    """
+    Dedicated non-blocking background thread for PipeWire/PulseAudio volume adjustments.
+    Coalesces rapid slider move events so the GTK main UI thread NEVER lags or blocks.
+    """
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.queue = queue.Queue(maxsize=1)
+        self.current_val = -1
+        self.muted = False
+        self.running = True
+
+    def set_volume(self, val):
+        try:
+            self.queue.get_nowait()
+        except queue.Empty:
+            pass
+        self.queue.put(val)
+
+    def stop(self):
+        self.running = False
+        try:
+            self.queue.get_nowait()
+        except queue.Empty:
+            pass
+        self.queue.put(None)
+
+    def run(self):
+        while self.running:
+            try:
+                val = self.queue.get(timeout=0.1)
+            except queue.Empty:
+                continue
+            if val is None or not self.running:
+                break
+            if val != self.current_val:
+                self.current_val = val
+                if self.muted and val > 0:
+                    subprocess.run(["pactl", "set-sink-mute", "@DEFAULT_SINK@", "0"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    self.muted = False
+                subprocess.run(["pactl", "set-sink-volume", "@DEFAULT_SINK@", f"{val}%"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.queue.task_done()
+
+def get_current_value(m):
+    if m == "volume":
+        try:
+            out = subprocess.check_output(["pactl", "get-sink-volume", "@DEFAULT_SINK@"]).decode()
+            for tok in out.split():
+                if tok.endswith("%"):
+                    val = int(tok.rstrip("%"))
+                    try:
+                        mute_out = subprocess.check_output(["pactl", "get-sink-mute", "@DEFAULT_SINK@"]).decode()
+                        muted = "yes" in mute_out.lower()
+                    except Exception:
+                        muted = False
+                    return min(max(val, 0), 100), muted
+        except Exception:
+            pass
+        try:
+            out = subprocess.check_output(["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]).decode()
+            parts = out.strip().split()
+            val = int(float(parts[1]) * 100)
+            muted = "[MUTED]" in out
+            return min(max(val, 0), 100), muted
+        except Exception:
+            return 50, False
+    else:
+        try:
+            if os.path.exists(SYSFS_BRIGHTNESS):
+                with open(SYSFS_BRIGHTNESS, "r") as f:
+                    cur = int(f.read().strip())
+                pct = round((cur * 100) / MAX_BACKLIGHT)
+                return min(max(pct, MIN_BRIGHTNESS), 100), False
+        except Exception:
+            pass
+        try:
+            cur = int(subprocess.check_output(["brightnessctl", "get"]).decode().strip())
+            mx = int(subprocess.check_output(["brightnessctl", "max"]).decode().strip())
+            pct = round((cur * 100) / mx)
+            return min(max(pct, MIN_BRIGHTNESS), 100), False
+        except Exception:
+            return 50, False
+
+
+app_window = None
+
+class SliderPopup(Gtk.Window):
+    def __init__(self, mode):
+        super().__init__()
+        global app_window
+        app_window = self
+
+        self.mode = mode
+        self.min_val = MIN_VAL
+        self.val, self.muted = get_current_value(mode)
+        self.last_applied_val = self.val
+        self.is_closing = False
+        self.anim_timer_id = None
+
+        if mode == "volume":
+            self.audio_worker = AudioWorker()
+            self.audio_worker.muted = self.muted
+            self.audio_worker.current_val = self.val
+            self.audio_worker.start()
+            self.brightness_file = None
+        else:
+            self.audio_worker = None
+            try:
+                self.brightness_file = open(SYSFS_BRIGHTNESS, "r+")
+            except Exception:
+                self.brightness_file = None
+
+        # 32-bit RGBA transparency
+        screen = self.get_screen()
+        visual = screen.get_rgba_visual()
+        if visual:
+            self.set_visual(visual)
+        self.set_app_paintable(True)
+
+        # LayerShell setup
+        # Layer.TOP places the popup directly behind Waybar (which is Layer.OVERLAY),
+        # so when the slider drops down it appears to emerge from behind the Waybar button.
+        GtkLayerShell.init_for_window(self)
+        GtkLayerShell.set_layer(self, GtkLayerShell.Layer.TOP)
+        GtkLayerShell.set_namespace(self, "slider-popup")
+
+        # Alignment directly dropping from the respective button:
+        # Volume button center: ~401 margin_right
+        # Brightness button center: ~328 margin_right
+        self.margin_r = 401 if mode == "volume" else 328
+
+        GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.TOP, True)
+        GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.BOTTOM, False)
+        GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, True)
+        GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.LEFT, False)
+
+        # Start HIDDEN behind Waybar (margin_top = 0, fully tucked under the bar)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, MARGIN_TOP_HIDDEN)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, self.margin_r)
+        GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
+
+        self.connect("destroy", self.on_window_destroy)
+        self.connect("key-press-event", self.on_key_press)
+
+        # Main Container (Vertical Card)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.set_name("popup-box")
+
+        # Top: Close button (touch-friendly ✕)
+        close_btn = Gtk.Button(label="✕")
+        close_btn.set_name("close-btn")
+        close_btn.set_halign(Gtk.Align.CENTER)
+        close_btn.set_valign(Gtk.Align.CENTER)
+        close_btn.connect("clicked", lambda b: self.close_animated())
+        box.pack_start(close_btn, False, False, 0)
+
+        # Value text (Percentage / Muted)
+        self.val_label = Gtk.Label()
+        self.val_label.set_name("val-label")
+        self.val_label.set_halign(Gtk.Align.CENTER)
+        box.pack_start(self.val_label, False, False, 0)
+
+        # Vertical Slider (Gtk.Scale)
+        # inverted=True: bottom is 0%, top is 100% (dragging up increases value)
+        self.adj = Gtk.Adjustment(value=self.val, lower=self.min_val, upper=100, step_increment=1, page_increment=5)
+        self.scale = Gtk.Scale(orientation=Gtk.Orientation.VERTICAL, adjustment=self.adj)
+        self.scale.set_name("touch-slider")
+        self.scale.set_inverted(True)
+        self.scale.set_draw_value(False)
+        self.scale.set_vexpand(True)
+        self.scale.connect("value-changed", self.on_slider_changed)
+        box.pack_start(self.scale, True, True, 2)
+
+        # Bottom Icon Button (interactive)
+        icon_btn = Gtk.Button()
+        icon_btn.set_name("icon-btn")
+        icon_btn.set_halign(Gtk.Align.CENTER)
+        icon_btn.connect("clicked", self.on_icon_clicked)
+
+        self.icon_label = Gtk.Label()
+        self.icon_label.set_name("icon-label")
+        icon_btn.add(self.icon_label)
+        box.pack_start(icon_btn, False, False, 2)
+
+        self.update_ui(self.val)
+        self.add(box)
+
+        # Styling
+        accent_color = b"#a6e3a1" if mode == "volume" else b"#f9e2af"
+        css = b"""
+        window, #slider-window {
+            background-color: transparent;
+            background: transparent;
+        }
+        #popup-box {
+            background-color: rgba(30, 30, 46, 0.95);
+            border: 2px solid """ + accent_color + b""";
+            border-radius: 28px;
+            padding: 12px 10px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+        }
+        #close-btn {
+            background-image: none;
+            background-color: rgba(69, 71, 90, 0.65);
+            color: #cdd6f4;
+            border-radius: 50%;
+            font-size: 13px;
+            font-weight: bold;
+            padding: 0;
+            margin: 0;
+            min-width: 28px;
+            min-height: 28px;
+            border: none;
+            box-shadow: none;
+            outline: none;
+        }
+        #close-btn:hover {
+            background-image: none;
+            background-color: rgba(90, 93, 115, 0.95);
+            color: #ffffff;
+        }
+        #close-btn:active {
+            background-image: none;
+            background-color: #f38ba8;
+            color: #11111b;
+        }
+        #val-label {
+            font-size: 15px;
+            font-weight: bold;
+            color: #cdd6f4;
+        }
+        #touch-slider {
+            background: transparent;
+            background-image: none;
+            box-shadow: none;
+            border: none;
+            outline: none;
+        }
+        #touch-slider contents {
+            background: transparent;
+            background-image: none;
+            box-shadow: none;
+            border: none;
+            outline: none;
+        }
+        #touch-slider trough {
+            min-width: 26px;
+            min-height: 180px;
+            border-radius: 13px;
+            background-image: none;
+            background-color: rgba(69, 71, 90, 0.85);
+            border: none;
+            box-shadow: none;
+            outline: none;
+        }
+        #touch-slider highlight {
+            min-width: 26px;
+            border-radius: 13px;
+            background-image: none;
+            background-color: """ + accent_color + b""";
+            border: none;
+            box-shadow: none;
+            outline: none;
+        }
+        #touch-slider slider {
+            min-width: 38px;
+            min-height: 38px;
+            margin: 0 -6px;
+            border-radius: 50%;
+            background-image: none;
+            background-color: #ffffff;
+            border: 3px solid #1e1e2e;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+            outline: none;
+        }
+        #touch-slider slider:active,
+        #touch-slider slider:hover {
+            background-image: none;
+            background-color: #ffffff;
+            border: 3px solid """ + accent_color + b""";
+            outline: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+        }
+        #icon-btn {
+            background-image: none;
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 2px;
+            margin: 0;
+            outline: none;
+        }
+        #icon-btn:hover {
+            background-color: rgba(69, 71, 90, 0.4);
+            border-radius: 50%;
+        }
+        #icon-label {
+            font-size: 24px;
+            color: """ + accent_color + b""";
+        }
+        """
+        provider = Gtk.CssProvider()
+        provider.load_from_data(css)
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+        # Auto-dismiss timer (4.5 seconds idle) — started after open animation completes
+        self.timer_id = None
+
+    # ─── Custom vertical slide animation ─────────────────────────
+    def start_open_animation(self):
+        """
+        Animate the popup sliding DOWN from behind Waybar.
+        margin-top goes from MARGIN_TOP_HIDDEN (0) → MARGIN_TOP_VISIBLE (66)
+        using cubic ease-out for a smooth deceleration feel.
+        """
+        self.anim_start_time = time.monotonic()
+        self.anim_from = MARGIN_TOP_HIDDEN
+        self.anim_to = MARGIN_TOP_VISIBLE
+        self.anim_ease = ease_out_cubic
+        self.anim_timer_id = GLib.timeout_add(ANIM_FRAME_MS, self._tick_open)
+
+    def _tick_open(self):
+        elapsed = (time.monotonic() - self.anim_start_time) * 1000  # ms
+        t = min(elapsed / ANIM_DURATION_MS, 1.0)
+        eased = self.anim_ease(t)
+        current_margin = int(self.anim_from + (self.anim_to - self.anim_from) * eased)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, current_margin)
+
+        if t >= 1.0:
+            # Animation complete — start auto-dismiss timer
+            self.anim_timer_id = None
+            self.timer_id = GLib.timeout_add(4500, self.auto_dismiss)
+            return False  # Stop timer
+        return True  # Continue
+
+    def _start_close_animation(self):
+        """
+        Animate the popup sliding UP back behind Waybar.
+        margin-top goes from MARGIN_TOP_VISIBLE (66) → MARGIN_TOP_HIDDEN (0)
+        using cubic ease-in for an accelerating exit feel.
+        """
+        self.anim_start_time = time.monotonic()
+        self.anim_from = MARGIN_TOP_VISIBLE
+        self.anim_to = MARGIN_TOP_HIDDEN
+        self.anim_ease = ease_in_cubic
+        self.anim_timer_id = GLib.timeout_add(ANIM_FRAME_MS, self._tick_close)
+
+    def _tick_close(self):
+        elapsed = (time.monotonic() - self.anim_start_time) * 1000  # ms
+        t = min(elapsed / ANIM_DURATION_MS, 1.0)
+        eased = self.anim_ease(t)
+        current_margin = int(self.anim_from + (self.anim_to - self.anim_from) * eased)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, current_margin)
+
+        if t >= 1.0:
+            # Animation complete — destroy window and quit
+            self.anim_timer_id = None
+            self.destroy()
+            GLib.timeout_add(50, Gtk.main_quit)
+            return False  # Stop timer
+        return True  # Continue
+
+    # ─── Close / dismiss ──────────────────────────────────────────
+    def close_animated(self):
+        """
+        Smooth slide-up exit animation:
+        Slides the popup back UP behind Waybar using our custom GTK animation,
+        then cleanly terminates the process.
+        """
+        if self.is_closing:
+            return
+        self.is_closing = True
+
+        if os.path.exists(PID_FILE):
+            try:
+                os.remove(PID_FILE)
+            except Exception:
+                pass
+
+        if self.timer_id:
+            GLib.source_remove(self.timer_id)
+            self.timer_id = None
+
+        # Cancel any running open animation
+        if self.anim_timer_id:
+            GLib.source_remove(self.anim_timer_id)
+            self.anim_timer_id = None
+
+        # Start close (slide-up) animation
+        self._start_close_animation()
+
+    def on_window_destroy(self, widget):
+        if self.brightness_file:
+            try:
+                self.brightness_file.close()
+            except Exception:
+                pass
+        if self.audio_worker:
+            self.audio_worker.stop()
+
+    def reset_timer(self):
+        if self.is_closing:
+            return
+        if self.timer_id:
+            GLib.source_remove(self.timer_id)
+        self.timer_id = GLib.timeout_add(4500, self.auto_dismiss)
+
+    def auto_dismiss(self):
+        self.close_animated()
+        return False
+
+    def on_key_press(self, widget, event):
+        if event.keyval == Gdk.KEY_Escape:
+            self.close_animated()
+            return True
+        return False
+
+    def on_icon_clicked(self, widget):
+        self.reset_timer()
+        if self.mode == "volume":
+            # Toggle mute
+            subprocess.run(["pactl", "set-sink-mute", "@DEFAULT_SINK@", "toggle"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.val, self.muted = get_current_value("volume")
+            if self.audio_worker:
+                self.audio_worker.muted = self.muted
+            self.update_ui(self.val)
+        else:
+            # Cycle brightness steps (25% -> 50% -> 75% -> 100% -> 25%)
+            cur = self.val
+            if cur < 35:
+                next_val = 50
+            elif cur < 65:
+                next_val = 75
+            elif cur < 90:
+                next_val = 100
+            else:
+                next_val = 25
+            self.scale.set_value(next_val)
+
+    def on_slider_changed(self, scale):
+        self.reset_timer()
+        val = int(scale.get_value())
+        if val == self.last_applied_val:
+            return
+        self.last_applied_val = val
+        self.update_ui(val)
+
+        if self.mode == "volume":
+            if self.audio_worker:
+                self.audio_worker.set_volume(val)
+                if self.muted and val > 0:
+                    self.muted = False
+        else:
+            # Sub-millisecond direct write to sysfs
+            raw_val = max(1, round((val * MAX_BACKLIGHT) / 100))
+            if self.brightness_file:
+                try:
+                    self.brightness_file.seek(0)
+                    self.brightness_file.write(f"{raw_val}\n")
+                    self.brightness_file.flush()
+                except Exception:
+                    subprocess.run(["brightnessctl", "-q", "set", f"{val}%"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                subprocess.run(["brightnessctl", "-q", "set", f"{val}%"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    def update_ui(self, val):
+        if self.mode == "volume":
+            if self.muted:
+                self.icon_label.set_text("󰝟")
+                self.val_label.set_text("MUTE")
+            else:
+                if val == 0:
+                    self.icon_label.set_text("󰕿")
+                elif val < 50:
+                    self.icon_label.set_text("󰖀")
+                else:
+                    self.icon_label.set_text("󰕾")
+                self.val_label.set_text(f"{val}%")
+        else:
+            if val < 30:
+                self.icon_label.set_text("󰃞")
+            elif val < 70:
+                self.icon_label.set_text("󰃟")
+            else:
+                self.icon_label.set_text("󰃠")
+            self.val_label.set_text(f"{val}%")
+
+def handle_sigusr1(*args):
+    """Trigger smooth animated exit upon toggle click from Waybar"""
+    if app_window:
+        GLib.idle_add(app_window.close_animated)
+
+def handle_sigterm(*args):
+    """Emergency or abrupt shutdown"""
+    if os.path.exists(PID_FILE):
+        try:
+            os.remove(PID_FILE)
+        except Exception:
+            pass
+    Gtk.main_quit()
+
+signal.signal(signal.SIGUSR1, handle_sigusr1)
+signal.signal(signal.SIGTERM, handle_sigterm)
+signal.signal(signal.SIGINT, handle_sigterm)
+
+def main():
+    win = SliderPopup(mode)
+    win.show_all()
+    # Start the custom open (slide-down) animation
+    win.start_open_animation()
+    Gtk.main()
+
+if __name__ == "__main__":
+    main()

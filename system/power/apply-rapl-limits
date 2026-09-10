@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# RAPL Power Limit Manager for Dell Latitude 7210 2-in-1 (Intel Core i7-10610U)
+
+RAPL_DIR="/sys/class/powercap/intel-rapl/intel-rapl:0"
+
+if [ ! -d "$RAPL_DIR" ]; then
+    modprobe intel_rapl_msr 2>/dev/null || modprobe intel_rapl_common 2>/dev/null
+fi
+
+if [ ! -f "$RAPL_DIR/constraint_0_power_limit_uw" ]; then
+    exit 0
+fi
+
+# Detect AC / Mains power
+IS_AC=0
+for ps in /sys/class/power_supply/AC /sys/class/power_supply/ucsi-source-psy-*; do
+    if [ -f "$ps/online" ] && [ "$(cat "$ps/online" 2>/dev/null)" = "1" ]; then
+        IS_AC=1
+        break
+    fi
+done
+
+if [ "$IS_AC" = "1" ]; then
+    # AC Profile: 15W sustained, 25W burst
+    PL1=15000000
+    PL2=25000000
+    MODE="AC (15W/25W)"
+else
+    # Battery Profile: 10W sustained, 15W burst (Optimized for 1080p video streaming & thermals)
+    PL1=10000000
+    PL2=15000000
+    MODE="BATTERY (10W/15W)"
+fi
+
+echo "$PL1" > "$RAPL_DIR/constraint_0_power_limit_uw" 2>/dev/null
+echo "$PL2" > "$RAPL_DIR/constraint_1_power_limit_uw" 2>/dev/null
+
+echo "RAPL configured: $MODE"

@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Real-time keyboard mode & open state for Waybar
+
+MODE="full"
+if [ -f "$HOME/.config/wvkbd-mode" ]; then
+    MODE=$(cat "$HOME/.config/wvkbd-mode" | tr -d " \n")
+fi
+
+IS_OPEN="off"
+if pgrep -x "wvkbd-deskintl" >/dev/null 2>&1 || pgrep -x "wvkbd-mobintl" >/dev/null 2>&1; then
+    IS_OPEN="on"
+fi
+
+if [ "$IS_OPEN" = "on" ]; then
+    case "$MODE" in
+        right) echo '{"text": "⌨ R", "tooltip": "Keyboard: Right Docked (Open)", "class": "active right"}' ;;
+        left)  echo '{"text": "⌨ L", "tooltip": "Keyboard: Left Docked (Open)", "class": "active left"}' ;;
+        *)     echo '{"text": "⌨ Full", "tooltip": "Keyboard: Full Width (Open)", "class": "active full"}' ;;
+    esac
+else
+    case "$MODE" in
+        right) echo '{"text": "⌨ [R]", "tooltip": "Keyboard: Right Docked (Closed)", "class": "inactive"}' ;;
+        left)  echo '{"text": "⌨ [L]", "tooltip": "Keyboard: Left Docked (Closed)", "class": "inactive"}' ;;
+        *)     echo '{"text": "⌨", "tooltip": "Keyboard: Full Width (Closed)", "class": "inactive"}' ;;
+    esac
+fi

@@ -1,0 +1,134 @@
+{
+    "layer": "overlay",
+    "position": "top",
+    "height": 54,
+    "margin-top": 6,
+    "margin-left": 10,
+    "margin-right": 10,
+    "spacing": 8,
+    "modules-left": [
+        "hyprland/workspaces",
+        "hyprland/window"
+    ],
+    "modules-center": [
+        "clock"
+    ],
+    "modules-right": [
+        "custom/agent",
+        "pulseaudio",
+        "backlight",
+        "network",
+        "custom/tailscale",
+        "custom/keyboard",
+        "battery",
+        "tray"
+    ],
+    "hyprland/workspaces": {
+        "disable-scroll": true,
+        "all-outputs": true,
+        "format": "{name}",
+        "on-click": "activate"
+    },
+    "hyprland/window": {
+        "format": "{title}",
+        "max-length": 30,
+        "separate-outputs": true
+    },
+    "custom/agent": {
+        "format": "🤖 AI",
+        "tooltip": true,
+        "tooltip-format": "AI Agent Scratchpad (Super + Space)\nSuper + Shift + C: AI Crash Diagnostics",
+        "on-click": "/home/johnny/.local/bin/toggle-agent"
+    },
+    "clock": {
+        "format": " {:%I:%M %p  󰃭 %a, %b %d}",
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
+        "on-click": "notify-send -t 4000 '📅 Calendar' \"$(cal)\""
+    },
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-muted": "󰝟 Muted",
+        "format-icons": {
+            "default": [
+                "󰕿",
+                "󰖀",
+                "󰕾"
+            ]
+        },
+        "tooltip-format": "{desc}\nTap: Open Touch Slider\nRight-Tap: Toggle Mute\nDouble-Tap: Pavucontrol",
+        "on-click": "/home/johnny/.local/bin/slider-popup volume",
+        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "on-double-click": "pavucontrol",
+        "on-scroll-up": "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+",
+        "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+    },
+    "backlight": {
+        "format": "{icon} {percent}%",
+        "format-icons": [
+            "󰃞",
+            "󰃟",
+            "󰃠"
+        ],
+        "tooltip-format": "Brightness: {percent}%\nTap: Open Touch Slider\nRight-Tap: Cycle Steps",
+        "on-click": "/home/johnny/.local/bin/slider-popup brightness",
+        "on-click-right": "/home/johnny/.local/bin/cycle-brightness",
+        "on-scroll-up": "brightnessctl -e4 -n2 set 5%+",
+        "on-scroll-down": "brightnessctl -e4 -n2 set 5%-"
+    },
+    "battery": {
+        "states": {
+            "good": 95,
+            "warning": 30,
+            "critical": 15
+        },
+        "format": "{icon} {capacity}% ({power:.1f}W)",
+        "format-charging": "󰂄 {capacity}% (+{power:.1f}W)",
+        "format-plugged": "󰂄 {capacity}% (Plugged)",
+        "format-icons": [
+            "󰁺",
+            "󰁻",
+            "󰁼",
+            "󰁽",
+            "󰁾",
+            "󰁿",
+            "󰂀",
+            "󰂁",
+            "󰂂",
+            "󰁹"
+        ],
+        "tooltip-format": "{timeTo}\nPower Rate: {power:.2f} W\nHealth: {health}%\nTap: Toggle Magic Eco Mode\nRight-Tap: Power Stats",
+        "on-click": "/home/johnny/.local/bin/toggle-eco-mode",
+        "on-click-right": "notify-send -t 3500 '🔋 Battery Health' \"$(upower -i $(upower -e | grep BAT) | grep -E 'state|to full|to empty|percentage|energy-rate|voltage')\""
+    },
+    "network": {
+        "format-wifi": "󰤨 {essid}",
+        "format-ethernet": "󰈀 {ipaddr}",
+        "format-linked": "󰈁 (No IP)",
+        "format-disconnected": "󰤭 Disconnected",
+        "tooltip-format": "{ifname} via {gwaddr} ({signalStrength}%)\nTap: Network Settings (nmtui)",
+        "on-click": "kitty -e nmtui"
+    },
+    "custom/tailscale": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "/home/johnny/.local/bin/tailscale-status",
+        "interval": 10,
+        "on-click": "kitty --hold -e tailscale status",
+        "tooltip": true
+    },
+    "tray": {
+        "icon-size": 20,
+        "spacing": 10
+    },
+    "custom/keyboard": {
+        "exec": "/home/johnny/.local/bin/keyboard-status",
+        "return-type": "json",
+        "signal": 1,
+        "interval": 2,
+        "on-click": "/home/johnny/.local/bin/toggle-keyboard",
+        "on-click-right": "/home/johnny/.local/bin/keyboard-mode-menu",
+        "on-double-click": "/home/johnny/.local/bin/keyboard-mode-menu",
+        "on-scroll-up": "/home/johnny/.local/bin/toggle-keyboard cycle",
+        "on-scroll-down": "/home/johnny/.local/bin/toggle-keyboard cycle"
+    }
+}

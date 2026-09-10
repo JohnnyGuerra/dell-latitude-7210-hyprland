@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Hardware Edge & Multi-Touch Gestures Daemon for Dell Latitude 7210 (lisgd)
+# Supports edge-swipes (from bezels) and 2/3/4-finger gestures (anywhere on glass)
+
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)}"
+SIG=$(ls -t "$XDG_RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
+[ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+
+DEV="/dev/input/by-path/pci-0000:00:15.0-platform-i2c_designware.0-event"
+ORIENT_FILE="$XDG_RUNTIME_DIR/touch-transform"
+
+if [ "$1" = "rotate" ]; then
+    if [ -n "$2" ]; then
+        echo "$2" > "$ORIENT_FILE"
+    fi
+    systemctl --user restart touch-gestures.service 2>/dev/null || true
+    exit 0
+fi
+
+# Determine orientation
+TRANSFORM=""
+if [ -f "$ORIENT_FILE" ]; then
+    TRANSFORM=$(cat "$ORIENT_FILE" 2>/dev/null)
+fi
+if [ -z "$TRANSFORM" ]; then
+    TRANSFORM=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].transform // 0')
+fi
+TRANSFORM=${TRANSFORM:-0}
+
+# Map Hyprland transform to lisgd orientation (clockwise conversion)
+case "$TRANSFORM" in
+    0) LISGD_O=0 ;;
+    1) LISGD_O=3 ;;
+    2) LISGD_O=2 ;;
+    3) LISGD_O=1 ;;
+    *) LISGD_O=0 ;;
+esac
+
+exec /usr/bin/lisgd -d "$DEV"     -w 1920 -h 1280     -s 3.0     -o "$LISGD_O"     -t 50     -m 1200     -r 25     -g "1,DU,B,*,R,$HOME/.local/bin/touch-action keyboard"     -g "1,UD,B,*,R,$HOME/.local/bin/touch-action keyboard-close"     -g "1,UD,T,*,R,$HOME/.local/bin/touch-action brightness"     -g "1,RL,R,*,R,$HOME/.local/bin/touch-action scratchpad"     -g "1,LR,L,*,R,$HOME/.local/bin/touch-action launcher"     -g "2,DU,*,*,R,$HOME/.local/bin/touch-action keyboard"     -g "2,UD,*,*,R,$HOME/.local/bin/touch-action keyboard-close"     -g "3,DU,*,*,R,$HOME/.local/bin/touch-action scratchpad"     -g "3,UD,*,*,R,$HOME/.local/bin/touch-action scratchpad"     -g "3,RL,*,*,R,$HOME/.local/bin/touch-action next-workspace"     -g "3,LR,*,*,R,$HOME/.local/bin/touch-action prev-workspace"     -g "4,DU,*,*,R,$HOME/.local/bin/touch-action keyboard"     -g "4,UD,*,*,R,$HOME/.local/bin/touch-action launcher"     -g "4,RL,*,*,R,$HOME/.local/bin/touch-action next-workspace"     -g "4,LR,*,*,R,$HOME/.local/bin/touch-action prev-workspace"

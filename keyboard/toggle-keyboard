@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Dynamic Orientation-Aware On-Screen Keyboard & AI Scratchpad Resizer
+# Automatically chooses Mobile tablet layout in Portrait and Desktop layout in Landscape
+# Supports Full-Width, Right-Handed, and Left-Handed One-Handed Modes
+
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)}"
+SIG=$(ls -t "$XDG_RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
+[ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+
+CONFIG_FILE="$HOME/.config/wvkbd-mode"
+CURRENT_MODE="full"
+if [ -f "$CONFIG_FILE" ]; then
+    CURRENT_MODE=$(cat "$CONFIG_FILE" | tr -d ' \n')
+fi
+
+is_kbd_running() {
+    pgrep -x wvkbd-deskintl >/dev/null 2>&1 || pgrep -x wvkbd-mobintl >/dev/null 2>&1
+}
+
+if [ "$1" = "close" ]; then
+    if is_kbd_running; then
+        killall -9 wvkbd-deskintl wvkbd-mobintl 2>/dev/null
+        ~/.local/bin/fit-agent-window >/dev/null 2>&1 &
+        pkill -RTMIN+1 waybar 2>/dev/null || true
+    fi
+    exit 0
+fi
+
+if [ -n "$1" ]; then
+    case "$1" in
+        full|right|left)
+            CURRENT_MODE="$1"
+            echo "$CURRENT_MODE" > "$CONFIG_FILE"
+            ;;
+        cycle)
+            case "$CURRENT_MODE" in
+                full) CURRENT_MODE="right" ;;
+                right) CURRENT_MODE="left" ;;
+                left) CURRENT_MODE="full" ;;
+                *) CURRENT_MODE="full" ;;
+            esac
+            echo "$CURRENT_MODE" > "$CONFIG_FILE"
+            ;;
+    esac
+fi
+
+# If already open and no explicit mode was passed, toggle closed
+if [ -z "$1" ] && is_kbd_running; then
+    killall -9 wvkbd-deskintl wvkbd-mobintl 2>/dev/null
+    ~/.local/bin/fit-agent-window >/dev/null 2>&1 &
+    pkill -RTMIN+1 waybar 2>/dev/null || true
+    exit 0
+fi
+
+# If open and an explicit mode or cycle was passed, kill existing to relaunch
+if is_kbd_running; then
+    killall -9 wvkbd-deskintl wvkbd-mobintl 2>/dev/null
+fi
+
+# Detect screen orientation
+TRANSFORM=$(hyprctl monitors -j 2>/dev/null | jq -r '.[0].transform // 0')
+TRANSFORM=${TRANSFORM:-0}
+
+if [ "$TRANSFORM" = "1" ] || [ "$TRANSFORM" = "3" ]; then
+    # Portrait: Use mobile tablet layout (large, spacious keys without cramped 14-key function row)
+    KBD_BIN="wvkbd-mobintl"
+    KBD_HEIGHT=400
+    KBD_RATIO=0.76
+    KBD_FONT="Inter 15"
+else
+    # Landscape: Use desktop layout (wider 1440px screen comfortably fits full function row)
+    KBD_BIN="wvkbd-deskintl"
+    KBD_HEIGHT=300
+    KBD_RATIO=0.68
+    KBD_FONT="Inter 13"
+fi
+
+EXTRA_ARGS=""
+if [ "$CURRENT_MODE" = "right" ]; then
+    EXTRA_ARGS="--dock right --ratio $KBD_RATIO"
+elif [ "$CURRENT_MODE" = "left" ]; then
+    EXTRA_ARGS="--dock left --ratio $KBD_RATIO"
+fi
+
+$KBD_BIN     -L 300     -H "$KBD_HEIGHT"     -R 12     --fn "$KBD_FONT"     --alpha 175     --bg-alpha 235     --bg 1e1e2e     --fg 313244     --fg-sp 45475a     --text cdd6f4     --text-sp cba6f7     --press cba6f7     --text-press 1e1e2e     --double-space-period $EXTRA_ARGS     >/dev/null 2>&1 &
+
+sleep 0.1
+~/.local/bin/fit-agent-window >/dev/null 2>&1 &
+pkill -RTMIN+1 waybar 2>/dev/null || true

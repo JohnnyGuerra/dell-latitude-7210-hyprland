@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Toggle refresh rate between 60Hz and 48Hz on Dell Latitude 7210 2-in-1
+
+# Get current refresh rate (round to int)
+CURRENT_HZ=$(hyprctl monitors -j | grep -o '"refreshRate": [0-9.]*' | head -1 | awk '{print int($2)}')
+CURRENT_HZ=${CURRENT_HZ:-60}
+
+# Read current transform if any
+CURRENT_TRANSFORM=$(hyprctl monitors -j | grep -o '"transform": [0-9]' | head -1 | awk '{print $2}')
+CURRENT_TRANSFORM=${CURRENT_TRANSFORM:-0}
+
+if [ "$CURRENT_HZ" -ge 55 ]; then
+    TARGET_MODE="1920x1280@48.00Hz"
+    TARGET_LABEL="48 Hz (Battery Saver)"
+else
+    TARGET_MODE="1920x1280@60.005"
+    TARGET_LABEL="60 Hz (Smooth)"
+fi
+
+hyprctl eval "hl.monitor({ output = 'eDP-1', mode = '$TARGET_MODE', position = '0x0', scale = '1.33', transform = $CURRENT_TRANSFORM })"
+notify-send -t 1500 -i video-display "Display Refresh Rate" "Switched to $TARGET_LABEL" 2>/dev/null || true

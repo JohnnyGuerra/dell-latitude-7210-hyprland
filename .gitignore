@@ -1,3 +1,10 @@
+# Makepkg build artifacts
+*.pkg.tar.zst
+*.pkg.tar.xz
+src/
+pkg/
+dell-latitude-7210-hyprland/
+
 # OS / Editor artifacts
 .DS_Store
 *.swp
