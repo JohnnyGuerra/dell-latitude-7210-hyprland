@@ -63,7 +63,7 @@ case "$ACTION" in
         done
 
         echo "==> Deploy complete. Reloading desktop components..."
-        ssh "$TARGET_HOST" 'export XDG_RUNTIME_DIR="/run/user/$(id -u)"; export WAYLAND_DISPLAY="$(ls "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)"; export HYPRLAND_INSTANCE_SIGNATURE="$(ls -t "$XDG_RUNTIME_DIR"/hypr/ 2>/dev/null | head -n 1)"; hyprctl reload 2>/dev/null || true; killall -SIGUSR2 waybar 2>/dev/null || true; killall mako 2>/dev/null || true; (swaync-client -R && swaync-client -rs 2>/dev/null || hyprctl eval "hl.exec_cmd(\"swaync\")"); killall -SIGUSR1 kitty 2>/dev/null || true'
+        ssh "$TARGET_HOST" 'export XDG_RUNTIME_DIR="/run/user/$(id -u)"; export WAYLAND_DISPLAY="$(ls "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)"; export HYPRLAND_INSTANCE_SIGNATURE="$(ls -t "$XDG_RUNTIME_DIR"/hypr/ 2>/dev/null | head -n 1)"; hyprctl reload 2>/dev/null || true; killall -SIGUSR2 waybar 2>/dev/null || true; killall mako 2>/dev/null || true; (swaync-client -R && swaync-client -rs 2>/dev/null || systemctl --user restart swaync 2>/dev/null || hyprctl eval "hl.exec_cmd(\"swaync\")"); killall -SIGUSR1 kitty 2>/dev/null || true'
         echo "==> Desktop reloaded."
         ;;
 
