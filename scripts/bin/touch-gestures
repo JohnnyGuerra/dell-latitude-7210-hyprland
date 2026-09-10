@@ -55,7 +55,7 @@ exec /usr/bin/lisgd -d "$DEV" \
     -g "3,UD,*,*,R,$HOME/.local/bin/touch-action scratchpad" \
     -g "3,RL,*,*,R,$HOME/.local/bin/touch-action next-workspace" \
     -g "3,LR,*,*,R,$HOME/.local/bin/touch-action prev-workspace" \
-    -g "4,DU,*,*,R,$HOME/.local/bin/touch-action keyboard" \
-    -g "4,UD,*,*,R,$HOME/.local/bin/touch-action launcher" \
+    -g "4,DU,*,*,R,$HOME/.local/bin/touch-action switcher" \
+    -g "4,UD,*,*,R,$HOME/.local/bin/touch-action control-center" \
     -g "4,RL,*,*,R,$HOME/.local/bin/touch-action next-workspace" \
     -g "4,LR,*,*,R,$HOME/.local/bin/touch-action prev-workspace"

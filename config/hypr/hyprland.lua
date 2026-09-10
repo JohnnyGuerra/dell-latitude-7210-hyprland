@@ -135,6 +135,36 @@ hl.gesture({
     action = "workspace"
 })
 
+-- 3-Finger Vertical: Toggle AI Agent Scratchpad (matches touchscreen)
+hl.gesture({
+    fingers = 3,
+    direction = "vertical",
+    action = "special",
+    workspace_name = "agent"
+})
+
+-- 4-Finger Swipe Up: Window Switcher
+hl.gesture({
+    fingers = 4,
+    direction = "up",
+    action = {
+        finish = function()
+            hl.exec_cmd(os.getenv("HOME") .. "/.local/bin/touch-switcher")
+        end
+    }
+})
+
+-- 4-Finger Swipe Down: SwayNC Control Center
+hl.gesture({
+    fingers = 4,
+    direction = "down",
+    action = {
+        finish = function()
+            hl.exec_cmd("swaync-client -t -sw")
+        end
+    }
+})
+
 ---------------------
 ---- KEYBINDINGS ----
 ---------------------
