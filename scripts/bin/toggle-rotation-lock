@@ -15,9 +15,9 @@ if [ "${1:-}" = "toggle" ]; then
     exit 0
 fi
 
-# Default / Waybar status mode:
+# Native UTF-8 FontAwesome BMP icons: U+F023 (locked) and U+F13E (unlocked)
 if [ -f "$LOCK_FILE" ]; then
-    echo '{"text": "󰌾", "tooltip": "Auto-Rotation: LOCKED\nTap to enable automatic screen rotation", "class": "locked"}'
+    echo '{"text": "", "tooltip": "Auto-Rotation: LOCKED\nTap to enable automatic screen rotation", "class": "locked"}'
 else
-    echo '{"text": "󰘥", "tooltip": "Auto-Rotation: UNLOCKED\nTap to lock orientation", "class": "unlocked"}'
+    echo '{"text": "", "tooltip": "Auto-Rotation: UNLOCKED\nTap to lock orientation", "class": "unlocked"}'
 fi

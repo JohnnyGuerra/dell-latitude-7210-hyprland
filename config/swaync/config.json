@@ -74,7 +74,7 @@
           "update-command": "sh -c 'bluetoothctl show 2>/dev/null | grep -q \"Powered: yes\" && echo true || echo false'"
         },
         {
-          "label": "󰌾",
+          "label": "",
           "type": "toggle",
           "active": false,
           "command": "sh -c '/home/johnny/.local/bin/toggle-rotation-lock toggle'",
