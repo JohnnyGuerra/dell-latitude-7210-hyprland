@@ -71,6 +71,12 @@ def apply_transform(tf):
     if os.path.isfile(gestures_script):
         subprocess.run([gestures_script, "rotate", str(tf)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+    # Sync Waydroid rotation with current orientation
+    try:
+        subprocess.run(["sudo", "/usr/bin/lxc-attach", "-P", "/var/lib/waydroid/lxc", "-n", "waydroid", "--", "/system/bin/wm", "user-rotation", "lock", str(tf)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1)
+    except Exception:
+        pass
+
 def on_properties_changed(connection, sender_name, object_path, interface_name, signal_name, parameters, user_data):
     if interface_name == 'org.freedesktop.DBus.Properties' and signal_name == 'PropertiesChanged':
         iface, changed, _ = parameters.unpack()
