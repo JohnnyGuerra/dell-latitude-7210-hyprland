@@ -49,6 +49,8 @@ case "$ACTION" in
         scp -q -r "$REPO_DIR/config/kitty/"* "$TARGET_HOST":~/.config/kitty/
         scp -q -r "$REPO_DIR/config/wofi/"* "$TARGET_HOST":~/.config/wofi/
         scp -q -r "$REPO_DIR/config/mako/"* "$TARGET_HOST":~/.config/mako/
+        ssh "$TARGET_HOST" "mkdir -p ~/.config/swaync"
+        scp -q -r "$REPO_DIR/config/swaync/"* "$TARGET_HOST":~/.config/swaync/
         scp -q "$REPO_DIR/config/starship.toml" "$TARGET_HOST":~/.config/ 2>/dev/null || true
         scp -q "$REPO_DIR/config/chrome-flags.conf" "$TARGET_HOST":~/.config/ 2>/dev/null || true
 
@@ -61,7 +63,7 @@ case "$ACTION" in
         done
 
         echo "==> Deploy complete. Reloading desktop components..."
-        ssh "$TARGET_HOST" "hyprctl reload 2>/dev/null || true; killall -SIGUSR2 waybar 2>/dev/null || true; killall -SIGUSR1 kitty 2>/dev/null || true"
+        ssh "$TARGET_HOST" 'export XDG_RUNTIME_DIR="/run/user/$(id -u)"; export WAYLAND_DISPLAY="$(ls "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)"; export HYPRLAND_INSTANCE_SIGNATURE="$(ls -t "$XDG_RUNTIME_DIR"/hypr/ 2>/dev/null | head -n 1)"; hyprctl reload 2>/dev/null || true; killall -SIGUSR2 waybar 2>/dev/null || true; killall mako 2>/dev/null || true; (pgrep swaync >/dev/null && swaync-client -R && swaync-client -rs || nohup swaync >/dev/null 2>&1 &); killall -SIGUSR1 kitty 2>/dev/null || true'
         echo "==> Desktop reloaded."
         ;;
 
@@ -85,7 +87,7 @@ case "$ACTION" in
 
     reload)
         echo "==> Reloading Hyprland, Waybar, and Kitty on $TARGET_HOST..."
-        ssh "$TARGET_HOST" "hyprctl reload; killall -SIGUSR2 waybar 2>/dev/null || true; killall -SIGUSR1 kitty 2>/dev/null || true"
+        ssh "$TARGET_HOST" 'export XDG_RUNTIME_DIR="/run/user/$(id -u)"; export WAYLAND_DISPLAY="$(ls "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)"; export HYPRLAND_INSTANCE_SIGNATURE="$(ls -t "$XDG_RUNTIME_DIR"/hypr/ 2>/dev/null | head -n 1)"; hyprctl reload 2>/dev/null || true; killall -SIGUSR2 waybar 2>/dev/null || true; killall -SIGUSR1 kitty 2>/dev/null || true'
         echo "==> Reloaded."
         ;;
 

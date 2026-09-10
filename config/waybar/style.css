@@ -57,6 +57,7 @@ window#waybar.hidden {
     font-weight: 500;
 }
 
+#custom-tasks,
 #clock,
 #battery,
 #backlight,
@@ -64,6 +65,8 @@ window#waybar.hidden {
 #pulseaudio,
 #custom-agent,
 #custom-keyboard,
+#custom-rotation-lock,
+#custom-notification,
 #tray {
     padding: 3px 10px;
     margin: 4px 3px;
@@ -138,3 +141,19 @@ window#waybar.hidden {
 #tray {
     margin-right: 6px;
 }
+
+#custom-rotation-lock.locked {
+    background-color: #cba6f7;
+    color: #1e1e2e;
+    font-weight: bold;
+}
+
+#custom-tasks {
+    color: #cba6f7;
+    font-size: 15px;
+    padding: 3px 10px;
+    background-color: rgba(203, 166, 247, 0.15);
+    border: 1px solid rgba(203, 166, 247, 0.3);
+}
+
+

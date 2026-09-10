@@ -1,0 +1,192 @@
+/* SwayNC Style - Dell Latitude 7210 Tablet Touch & Catppuccin Mocha */
+
+* {
+  font-family: "JetBrainsMono Nerd Font", sans-serif;
+  font-size: 14px;
+}
+
+:root {
+  --cc-bg: rgba(30, 30, 46, 0.94);
+  --noti-bg: rgba(49, 50, 68, 0.85);
+  --noti-bg-hover: rgba(69, 71, 90, 0.95);
+  --noti-bg-focus: rgba(69, 71, 90, 1.0);
+  --text-color: #cdd6f4;
+  --text-color-disabled: #6c7086;
+  --bg-selected: #cba6f7;
+  --border-radius: 14px;
+}
+
+.control-center {
+  background: var(--cc-bg);
+  border: 2px solid #cba6f7;
+  border-radius: var(--border-radius);
+  color: var(--text-color);
+  padding: 14px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* Header & Title */
+.widget-title {
+  color: #89b4fa;
+  font-weight: bold;
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+}
+
+.widget-title > button {
+  background: #313244;
+  color: #cdd6f4;
+  border: 1px solid #45475a;
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+.widget-title > button:hover {
+  background: #45475a;
+}
+
+/* Quick Settings Action Buttons (Touch Friendly) */
+.widget-buttons-grid {
+  margin: 10px 0;
+}
+
+.widget-buttons-grid flowboxchild {
+  margin: 4px;
+}
+
+.widget-buttons-grid flowboxchild > button {
+  background: #313244;
+  color: #cdd6f4;
+  border: 1px solid #45475a;
+  border-radius: 12px;
+  min-height: 48px;
+  min-width: 48px;
+  padding: 8px;
+  font-size: 18px;
+  transition: all 0.2s ease-in-out;
+}
+
+.widget-buttons-grid flowboxchild > button:hover {
+  background: #45475a;
+}
+
+.widget-buttons-grid flowboxchild > button.toggle:checked {
+  background: #cba6f7;
+  color: #1e1e2e;
+  font-weight: bold;
+  border-color: #b4befe;
+}
+
+/* Sliders (Volume & Brightness - Touch Thick Trough) */
+.widget-volume, .widget-backlight {
+  background: #24253a;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 6px 0;
+  border: 1px solid #313244;
+}
+
+.widget-volume label, .widget-backlight label {
+  color: #89b4fa;
+  font-size: 18px;
+  margin-right: 12px;
+}
+
+scale trough {
+  min-height: 12px;
+  min-width: 140px;
+  border-radius: 8px;
+  background-color: #45475a;
+}
+
+scale highlight {
+  min-height: 12px;
+  border-radius: 8px;
+  background-color: #cba6f7;
+}
+
+scale slider {
+  min-height: 24px;
+  min-width: 24px;
+  margin: -6px 0;
+  border-radius: 50%;
+  background-color: #f5e0dc;
+}
+
+/* MPRIS Media Player */
+.widget-mpris {
+  background: #24253a;
+  border-radius: 12px;
+  padding: 8px;
+  margin: 6px 0;
+}
+
+.widget-mpris .widget-mpris-player {
+  background-color: transparent;
+}
+
+.widget-mpris .widget-mpris-title {
+  color: #cdd6f4;
+  font-weight: bold;
+}
+
+.widget-mpris .widget-mpris-subtitle {
+  color: #a6adc8;
+}
+
+/* Do Not Disturb Switch */
+.widget-dnd {
+  background: #24253a;
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin: 6px 0;
+}
+
+.widget-dnd label {
+  color: #cdd6f4;
+}
+
+.widget-dnd switch {
+  border-radius: 12px;
+  background: #45475a;
+}
+
+.widget-dnd switch:checked {
+  background: #cba6f7;
+}
+
+/* Notifications List */
+.notification {
+  background: var(--noti-bg);
+  border: 1px solid #45475a;
+  border-radius: var(--border-radius);
+  color: var(--text-color);
+  margin: 6px 0;
+  padding: 10px;
+}
+
+.notification-content {
+  margin: 4px;
+}
+
+.summary {
+  color: #89b4fa;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.body {
+  color: #cdd6f4;
+  font-size: 13px;
+}
+
+.close-button {
+  border-radius: 8px;
+  background: transparent;
+  color: #f38ba8;
+}
+
+.close-button:hover {
+  background: #45475a;
+}

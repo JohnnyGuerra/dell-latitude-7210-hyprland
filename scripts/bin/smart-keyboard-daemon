@@ -31,14 +31,19 @@ stop_wvkbd() {
     fi
 }
 
-# Watcher loop to ensure auto keyboard runs ONLY when detached
+CURRENT_MODE=""
+
 while true; do
     if [ -d "$FOLIO_DEVICE_PATH" ]; then
-        # Keyboard attached -> kill/stop on-screen keyboard
-        stop_wvkbd
+        if [ "$CURRENT_MODE" != "desktop" ]; then
+            ~/.local/bin/toggle-tablet-mode desktop
+            CURRENT_MODE="desktop"
+        fi
     else
-        # Keyboard detached -> ensure --auto is running
-        start_wvkbd_auto
+        if [ "$CURRENT_MODE" != "tablet" ]; then
+            ~/.local/bin/toggle-tablet-mode tablet
+            CURRENT_MODE="tablet"
+        fi
     fi
     sleep 2
 done

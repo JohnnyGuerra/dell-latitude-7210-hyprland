@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Clean Dispatcher for Touch Gestures on Hyprland 0.56+
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)}"
+SIG=$(ls -t "$XDG_RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
+[ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+
+case "$1" in
+    scratchpad)
+        hyprctl eval 'hl.dispatch(hl.dsp.workspace.toggle_special("agent"))' >/dev/null 2>&1
+        ;;
+    launcher)
+        wofi --show drun >/dev/null 2>&1 &
+        ;;
+    keyboard)
+        $HOME/.local/bin/toggle-keyboard >/dev/null 2>&1
+        ;;
+    keyboard-close)
+        $HOME/.local/bin/toggle-keyboard close >/dev/null 2>&1
+        ;;
+    control-center)
+        swaync-client -t -sw >/dev/null 2>&1
+        ;;
+    switcher)
+        $HOME/.local/bin/touch-switcher >/dev/null 2>&1 &
+        ;;
+    brightness)
+        $HOME/.local/bin/slider-popup brightness >/dev/null 2>&1
+        ;;
+    volume)
+        $HOME/.local/bin/slider-popup volume >/dev/null 2>&1
+        ;;
+    next-workspace)
+        hyprctl eval 'hl.dispatch(hl.dsp.focus({ workspace = "+1" }))' >/dev/null 2>&1
+        ;;
+    prev-workspace)
+        hyprctl eval 'hl.dispatch(hl.dsp.focus({ workspace = "-1" }))' >/dev/null 2>&1
+        ;;
+esac

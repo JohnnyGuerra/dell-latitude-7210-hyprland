@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Toggle and Status for Screen Auto-Rotation Lock on Dell Latitude 7210
+set -euo pipefail
+
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+LOCK_FILE="$RUNTIME_DIR/rotation-lock"
+
+if [ "${1:-}" = "toggle" ]; then
+    if [ -f "$LOCK_FILE" ]; then
+        rm -f "$LOCK_FILE"
+    else
+        touch "$LOCK_FILE"
+    fi
+    pkill -RTMIN+8 waybar 2>/dev/null || true
+    exit 0
+fi
+
+# Default / Waybar status mode:
+if [ -f "$LOCK_FILE" ]; then
+    echo '{"text": "󰌾", "tooltip": "Auto-Rotation: LOCKED\nTap to enable automatic screen rotation", "class": "locked"}'
+else
+    echo '{"text": "󰘥", "tooltip": "Auto-Rotation: UNLOCKED\nTap to lock orientation", "class": "unlocked"}'
+fi

@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Touch-Friendly Visual Task / Window Switcher for Hyprland
+set -euo pipefail
+
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+export XDG_RUNTIME_DIR="$RUNTIME_DIR"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls "$RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)}"
+SIG=$(ls -t "$RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
+[ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+
+# Fetch open windows from Hyprland
+WINDOWS=$(python3 - << 'PYEOF'
+import json, subprocess, sys
+
+try:
+    data = subprocess.check_output(["hyprctl", "clients", "-j"], text=True)
+    clients = json.loads(data)
+except Exception:
+    sys.exit(0)
+
+# Sort windows by focus history (most recent first)
+clients = sorted([c for c in clients if c.get("mapped", False)], key=lambda c: c.get("focusHistoryID", 999))
+
+icons = {
+    "google-chrome": "󰖟",
+    "chromium": "󰖟",
+    "firefox": "󰈹",
+    "kitty": "󰞷",
+    "agent-terminal": "🤖",
+    "waydroid": "󰀲",
+    "stremio": "󰕼",
+    "nautilus": "󰉋",
+    "spotify": "󰓇"
+}
+
+for c in clients:
+    cls = c.get("class", "").lower()
+    title = c.get("title", "")
+    addr = c.get("address", "")
+    ws = c.get("workspace", {}).get("name", "")
+    
+    icon = "󰖲"
+    for k, v in icons.items():
+        if k in cls:
+            icon = v
+            break
+            
+    # Format: ICON  [Class] Title | [WS] (ADDR)
+    line = f"{icon}  [{c.get('class','')}] {title}  (WS: {ws})  :: {addr}"
+    print(line)
+PYEOF
+)
+
+[ -z "$WINDOWS" ] && exit 0
+
+STYLE_PATH="$HOME/.config/wofi/touch-style.css"
+[ -f "$STYLE_PATH" ] || STYLE_PATH="$HOME/.config/wofi/style.css"
+
+SELECTED=$(echo "$WINDOWS" | wofi \
+    --dmenu \
+    --prompt "󰕰 Switch Window" \
+    --width 75% \
+    --height 55% \
+    --style "$STYLE_PATH" \
+    --cache-file /dev/null \
+    --insensitive \
+    2>/dev/null || true)
+
+[ -z "$SELECTED" ] && exit 0
+
+# Extract address
+ADDR=$(echo "$SELECTED" | awk -F ':: ' '{print $2}' | tr -d ' ')
+if [ -n "$ADDR" ]; then
+    hyprctl dispatch focuswindow "address:$ADDR"
+fi

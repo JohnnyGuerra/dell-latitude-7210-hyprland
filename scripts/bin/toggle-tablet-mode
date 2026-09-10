@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Hardware Convergence / Tablet Mode Switcher for Dell Latitude 7210
+set -euo pipefail
+
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+export XDG_RUNTIME_DIR="$RUNTIME_DIR"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls "$RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1 | xargs -r basename)}"
+SIG=$(ls -t "$RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
+[ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+
+TABLET_FLAG="$RUNTIME_DIR/tablet-mode"
+ACTION="${1:-status}"
+
+case "$ACTION" in
+    tablet|enable)
+        touch "$TABLET_FLAG"
+        # Ensure touch gestures service is running
+        systemctl --user start touch-gestures.service 2>/dev/null || true
+        # Ensure auto keyboard is running
+        if ! pgrep -f "wvkbd-deskintl.*--auto" >/dev/null 2>&1; then
+            pkill -9 wvkbd-deskintl 2>/dev/null || true
+            wvkbd-deskintl \
+                --auto \
+                -L 300 \
+                -R 10 \
+                --alpha 220 \
+                --bg 1a1b26 \
+                --fg 24283b \
+                --fg-sp 1f2335 \
+                --text c0caf5 \
+                --text-sp 7aa2f7 \
+                --press 7aa2f7 \
+                --text-press 1a1b26 \
+                &
+        fi
+        ;;
+
+    desktop|disable)
+        rm -f "$TABLET_FLAG"
+        pkill -9 wvkbd-deskintl 2>/dev/null || true
+        ~/.local/bin/adjust-agent-size restore 2>/dev/null || true
+        ;;
+
+    status)
+        if [ -f "$TABLET_FLAG" ]; then
+            echo "tablet"
+        else
+            echo "desktop"
+        fi
+        ;;
+esac

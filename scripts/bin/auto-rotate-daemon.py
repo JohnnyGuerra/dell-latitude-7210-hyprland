@@ -26,6 +26,11 @@ ORIENTATION_MAP = {
 
 current_transform = 0
 
+def is_rotation_locked():
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    return os.path.exists(os.path.join(runtime_dir, "rotation-lock"))
+
+
 def get_hypr_env():
     uid = str(os.getuid())
     runtime_dir = f"/run/user/{uid}"
@@ -61,6 +66,11 @@ def apply_transform(tf):
     if os.path.isfile(fit_script):
         subprocess.run([fit_script], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+    # Re-align hardware edge gestures to current orientation
+    gestures_script = os.path.expanduser("~/.local/bin/touch-gestures")
+    if os.path.isfile(gestures_script):
+        subprocess.run([gestures_script, "rotate", str(tf)], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
 def on_properties_changed(connection, sender_name, object_path, interface_name, signal_name, parameters, user_data):
     if interface_name == 'org.freedesktop.DBus.Properties' and signal_name == 'PropertiesChanged':
         iface, changed, _ = parameters.unpack()
@@ -70,6 +80,10 @@ def on_properties_changed(connection, sender_name, object_path, interface_name, 
                 # When folio is attached, lock to landscape 0
                 if current_transform != 0:
                     apply_transform(0)
+                return
+
+            if is_rotation_locked():
+                # Rotation locked by user
                 return
 
             if new_orient in ORIENTATION_MAP:
@@ -113,15 +127,16 @@ def main():
     )
     
     # Check initial orientation
-    init_orient = proxy.get_cached_property('AccelerometerOrientation')
-    if init_orient:
-        orient_str = init_orient.get_string()
-        if not os.path.exists(FOLIO_PATH) and orient_str in ORIENTATION_MAP:
-            apply_transform(ORIENTATION_MAP[orient_str])
+    if not is_rotation_locked():
+        init_orient = proxy.get_cached_property('AccelerometerOrientation')
+        if init_orient:
+            orient_str = init_orient.get_string()
+            if not os.path.exists(FOLIO_PATH) and orient_str in ORIENTATION_MAP:
+                apply_transform(ORIENTATION_MAP[orient_str])
+            else:
+                apply_transform(0)
         else:
             apply_transform(0)
-    else:
-        apply_transform(0)
 
     # Periodic timer to check hardware folio detach/attach
     GLib.timeout_add_seconds(2, check_folio_status)
