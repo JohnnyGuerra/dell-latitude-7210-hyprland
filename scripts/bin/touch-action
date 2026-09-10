@@ -7,7 +7,7 @@ SIG=$(ls -t "$XDG_RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
 
 case "$1" in
     scratchpad)
-        hyprctl eval 'hl.dispatch(hl.dsp.workspace.toggle_special("agent"))' >/dev/null 2>&1
+        $HOME/.local/bin/toggle-agent >/dev/null 2>&1
         ;;
     launcher)
         wofi --show drun >/dev/null 2>&1 &
