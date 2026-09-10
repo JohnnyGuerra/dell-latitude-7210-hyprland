@@ -50,7 +50,8 @@
     "backlight": {
       "label": "󰃠",
       "device": "intel_backlight",
-      "subsystem": "backlight"
+      "subsystem": "backlight",
+      "min": 1
     },
     "mpris": {
       "image-size": 64,
