@@ -1,0 +1,1 @@
+root=PARTUUID=9954e47f-fb11-4d96-93c3-4711bb390428 resume=UUID=a869f967-27ea-472f-a1d2-f2c78ee1b2bd resume_offset=25319424 zswap.enabled=0 rw rootfstype=ext4 quiet splash loglevel=3 rd.udev.log_level=3 vt.global_cursor_default=0
