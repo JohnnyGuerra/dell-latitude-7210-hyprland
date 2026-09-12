@@ -1,0 +1,19 @@
+# Greetd Sway Configuration for Dell Latitude 7210
+# Minimal Sway kiosk running ReGreet with tablet touch keyboard support
+
+xwayland disable
+
+# HiDPI scale for Dell Latitude 7210 (1920x1280 @ 1.33)
+output * scale 1.33
+
+# Map touch input directly to active display
+input type:touch {
+    map_to_output *
+}
+
+# Borderless greeter window
+default_border none
+default_floating_border none
+
+# Execute session wrapper with folio detection
+exec /etc/greetd/greetd-session

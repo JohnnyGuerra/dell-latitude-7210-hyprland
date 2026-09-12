@@ -1,0 +1,22 @@
+#!/bin/bash
+# /etc/greetd/greetd-session
+# Auto-detects tablet folio keyboard on Dell Latitude 7210
+# Spawns wvkbd touch keyboard if detached, then launches ReGreet
+
+# Dell Latitude 7210 folio keyboard vendor ID is 044e
+if ! grep -qs '044e' /sys/bus/usb/devices/*/idVendor; then
+    # Tablet mode: Launch on-screen touch keyboard docked at bottom
+    wvkbd-mobintl -L 280 &
+    KBD_PID=$!
+fi
+
+# Launch ReGreet (Catppuccin Mocha themed)
+regreet
+
+# Terminate on-screen keyboard after login/exit
+if [ -n "$KBD_PID" ]; then
+    kill "$KBD_PID" 2>/dev/null || true
+fi
+
+# Exit Sway so greetd cleanly hands over to user session
+swaymsg exit
