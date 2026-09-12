@@ -22,7 +22,7 @@ case "$ACTION" in
         echo "==> Pulling configs from $TARGET_HOST..."
         mkdir -p "$REPO_DIR/config/hypr" "$REPO_DIR/config/waybar" "$REPO_DIR/config/kitty" \
                  "$REPO_DIR/config/wofi" "$REPO_DIR/config/mako" "$REPO_DIR/config/systemd/user" \
-                 "$REPO_DIR/scripts/bin"
+                 "$REPO_DIR/scripts/bin" "$REPO_DIR/config/herdr"
 
         scp -q -r "$TARGET_HOST":~/.config/hypr/* "$REPO_DIR/config/hypr/"
         scp -q -r "$TARGET_HOST":~/.config/waybar/* "$REPO_DIR/config/waybar/"
@@ -31,6 +31,7 @@ case "$ACTION" in
         scp -q -r "$TARGET_HOST":~/.config/mako/* "$REPO_DIR/config/mako/"
         scp -q "$TARGET_HOST":~/.config/starship.toml "$REPO_DIR/config/" 2>/dev/null || true
         scp -q "$TARGET_HOST":~/.config/chrome-flags.conf "$REPO_DIR/config/" 2>/dev/null || true
+        scp -q "$TARGET_HOST":~/.config/herdr/config.toml "$REPO_DIR/config/herdr/" 2>/dev/null || true
         scp -q -r "$TARGET_HOST":~/.config/systemd/user/* "$REPO_DIR/config/systemd/user/" 2>/dev/null || true
 
         echo "==> Pulling scripts from $TARGET_HOST:~/.local/bin/..."
@@ -49,10 +50,11 @@ case "$ACTION" in
         scp -q -r "$REPO_DIR/config/kitty/"* "$TARGET_HOST":~/.config/kitty/
         scp -q -r "$REPO_DIR/config/wofi/"* "$TARGET_HOST":~/.config/wofi/
         scp -q -r "$REPO_DIR/config/mako/"* "$TARGET_HOST":~/.config/mako/
-        ssh "$TARGET_HOST" "mkdir -p ~/.config/swaync"
+        ssh "$TARGET_HOST" "mkdir -p ~/.config/swaync ~/.config/herdr"
         scp -q -r "$REPO_DIR/config/swaync/"* "$TARGET_HOST":~/.config/swaync/
         scp -q "$REPO_DIR/config/starship.toml" "$TARGET_HOST":~/.config/ 2>/dev/null || true
         scp -q "$REPO_DIR/config/chrome-flags.conf" "$TARGET_HOST":~/.config/ 2>/dev/null || true
+        scp -q "$REPO_DIR/config/herdr/config.toml" "$TARGET_HOST":~/.config/herdr/ 2>/dev/null || true
 
         echo "==> Pushing scripts to $TARGET_HOST:~/.local/bin/..."
         for f in "$REPO_DIR"/scripts/bin/*; do
@@ -71,11 +73,12 @@ case "$ACTION" in
         echo "==> Checking diff against $TARGET_HOST..."
         TMP_DIR=$(mktemp -d)
         trap "rm -rf $TMP_DIR" EXIT
-        mkdir -p "$TMP_DIR/remote/hypr" "$TMP_DIR/remote/waybar" "$TMP_DIR/remote/kitty"
+        mkdir -p "$TMP_DIR/remote/hypr" "$TMP_DIR/remote/waybar" "$TMP_DIR/remote/kitty" "$TMP_DIR/remote/herdr"
         
         scp -q -r "$TARGET_HOST":~/.config/hypr/* "$TMP_DIR/remote/hypr/" 2>/dev/null || true
         scp -q -r "$TARGET_HOST":~/.config/waybar/* "$TMP_DIR/remote/waybar/" 2>/dev/null || true
         scp -q -r "$TARGET_HOST":~/.config/kitty/* "$TMP_DIR/remote/kitty/" 2>/dev/null || true
+        scp -q "$TARGET_HOST":~/.config/herdr/config.toml "$TMP_DIR/remote/herdr/" 2>/dev/null || true
 
         echo "--- hypr ---"
         diff -ruN "$REPO_DIR/config/hypr" "$TMP_DIR/remote/hypr" || true
@@ -83,6 +86,8 @@ case "$ACTION" in
         diff -ruN "$REPO_DIR/config/waybar" "$TMP_DIR/remote/waybar" || true
         echo "--- kitty ---"
         diff -ruN "$REPO_DIR/config/kitty" "$TMP_DIR/remote/kitty" || true
+        echo "--- herdr ---"
+        diff -ruN "$REPO_DIR/config/herdr" "$TMP_DIR/remote/herdr" || true
         ;;
 
     reload)
