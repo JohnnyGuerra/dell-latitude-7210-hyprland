@@ -6,6 +6,14 @@ export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 
 SIG=$(ls -t "$XDG_RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
 [ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
 
+# Exit cleanly if hyprlock is already running to avoid session lock conflicts
+if pidof hyprlock >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Clear any stale or crashed lockscreen state in Hyprland
+hyprctl -i 0 eval 'hl.clear_crashed_lockscreen()' >/dev/null 2>&1 || true
+
 # Detect if folio physical keyboard is detached (Alps USB 044e)
 KBD_AUTO_PID=""
 if ! grep -qs '044e' /sys/bus/usb/devices/*/idVendor 2>/dev/null; then

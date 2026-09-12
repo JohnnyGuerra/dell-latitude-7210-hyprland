@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 # Resilient display wake script for Dell Latitude 7210 2-in-1 (Intel Comet Lake eDP + Hyprland Aquamarine)
 
-export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+# Support running from systemd system-sleep hook (root) or user session
+if [ "$(id -u)" -eq 0 ]; then
+    USER_ID=1000
+    USER_NAME="johnny"
+    export XDG_RUNTIME_DIR="/run/user/$USER_ID"
+    export HOME="/home/$USER_NAME"
+else
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+fi
+
 export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | grep -v '\.lock$' | head -n 1 | xargs -r basename)}"
 SIG=$(ls -t "$XDG_RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
 [ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
@@ -9,17 +18,18 @@ SIG=$(ls -t "$XDG_RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
 # Retries across the 1.5-second Intel i915 eDP power-sequencing window
 for delay in 0.1 0.4 0.8 1.4; do
     sleep "$delay"
-    hyprctl -i 0 repl 'hl.dispatch(hl.dsp.dpms({ state = "on" })); hl.monitor({ output = "eDP-1", mode = "1920x1280@60.01Hz", position = "0x0", scale = "1.33" })' >/dev/null 2>&1
+    hyprctl -i 0 eval 'hl.dispatch(hl.dsp.dpms("on"))' >/dev/null 2>&1
+    hyprctl -i 0 eval 'hl.monitor({ output = "eDP-1", mode = "1920x1280@60.01Hz", position = "0x0", scale = "1.33" })' >/dev/null 2>&1
     
     # Check if DRM actually accepted the mode and enabled the CRTC
     DPMS_STATE=$(cat /sys/class/drm/card1-eDP-1/dpms 2>/dev/null || echo "")
     ENABLED_STATE=$(cat /sys/class/drm/card1-eDP-1/enabled 2>/dev/null || echo "")
     
     if [ "$DPMS_STATE" = "On" ] && [ "$ENABLED_STATE" = "enabled" ]; then
-        # Ensure backlight is physically lit
+        # Ensure backlight is physically lit and clearly visible (at least 50% = 60000)
         ACTUAL=$(cat /sys/class/backlight/intel_backlight/actual_brightness 2>/dev/null || echo 0)
-        if [ "$ACTUAL" -eq 0 ]; then
-            brightnessctl -q set 40% 2>/dev/null || true
+        if [ "$ACTUAL" -le 36000 ]; then
+            brightnessctl -q set 50% 2>/dev/null || echo 60000 > /sys/class/backlight/intel_backlight/brightness 2>/dev/null || true
         fi
         break
     fi
