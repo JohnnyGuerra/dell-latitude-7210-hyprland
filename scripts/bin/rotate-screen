@@ -27,5 +27,5 @@ if [ -n "$1" ]; then
     esac
 fi
 
-hyprctl eval "hl.monitor({ output = , mode = preferred, position = 0x0, scale = , transform = $NEXT_TRANSFORM })" >/dev/null 2>&1
+hyprctl eval "hl.monitor({ output = '$MONITOR', mode = 'preferred', position = '0x0', scale = '$SCALE', transform = $NEXT_TRANSFORM })" >/dev/null 2>&1
 notify-send -t 1500 "Screen Rotation" "Orientation set to transform $NEXT_TRANSFORM" 2>/dev/null || true

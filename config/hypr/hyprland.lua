@@ -8,7 +8,7 @@
 -- Dell 7210 12.3" 1920x1280 (3:2) display
 hl.monitor({
     output   = "eDP-1",
-    mode     = "1920x1280@60.005",
+    mode     = "1920x1280@60.01Hz",
     position = "0x0",
     scale    = "1.33",
 })
