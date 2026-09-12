@@ -1,0 +1,154 @@
+/* ReGreet Catppuccin Mocha Theme
+ * Matching Hyprlock Design for Dell Latitude 7210
+ */
+
+/* Top-level window & font */
+window {
+    background: transparent;
+    font-family: 'JetBrainsMono Nerd Font', monospace;
+}
+
+/* Base typography */
+label {
+    color: #cdd6f4;
+}
+
+/* Top Clock Header (Status Pill) */
+window > overlay > box > frame:first-child {
+    background: rgba(30, 30, 46, 0.75);
+    border: 1.5px solid rgba(203, 166, 247, 0.45);
+    border-radius: 20px;
+    padding: 6px 22px;
+    margin-top: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+window > overlay > box > frame:first-child label {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #cdd6f4;
+}
+
+/* Central Login Card Frame */
+frame {
+    background: rgba(30, 30, 46, 0.78);
+    border: 2px solid rgba(203, 166, 247, 0.45);
+    border-radius: 24px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65);
+}
+
+grid {
+    padding: 36px 42px;
+}
+
+/* Greeting message inside card */
+grid > label:first-child {
+    font-family: 'JetBrainsMono Nerd Font Bold', monospace;
+    font-size: 16pt;
+    font-weight: 800;
+    color: #cba6f7;
+    margin-bottom: 20px;
+}
+
+/* Row labels (User, Session) */
+grid > label {
+    font-family: 'JetBrainsMono Nerd Font SemiBold', monospace;
+    font-size: 13pt;
+    color: #b4befe;
+    font-weight: 600;
+}
+
+/* Inputs, Comboboxes & Dropdowns */
+combobox, dropdown, entry, passwordentry {
+    background: rgba(49, 50, 68, 0.9);
+    border: 1.5px solid rgba(203, 166, 247, 0.5);
+    border-radius: 14px;
+    color: #cdd6f4;
+    caret-color: #cba6f7;
+    font-size: 13pt;
+    padding: 8px 14px;
+}
+
+combobox:focus, dropdown:focus, entry:focus, passwordentry:focus {
+    border-color: #cba6f7;
+    box-shadow: 0 0 12px rgba(203, 166, 247, 0.4);
+}
+
+/* Combobox popovers / dropdown menus */
+popover, popover.menu, menu {
+    background-color: #1e1e2e;
+    border: 1.5px solid rgba(203, 166, 247, 0.5);
+    border-radius: 14px;
+    color: #cdd6f4;
+    padding: 6px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+popover modelbutton, menu menuitem {
+    color: #cdd6f4;
+    border-radius: 8px;
+    padding: 8px 14px;
+}
+
+popover modelbutton:hover, menu menuitem:hover {
+    background-color: #313244;
+    color: #cba6f7;
+}
+
+/* Edit pencil buttons */
+grid button {
+    background: rgba(49, 50, 68, 0.85);
+    border: 1.5px solid rgba(203, 166, 247, 0.4);
+    border-radius: 12px;
+    color: #cba6f7;
+    padding: 8px 12px;
+}
+
+grid button:hover {
+    background: rgba(203, 166, 247, 0.25);
+    border-color: #cba6f7;
+}
+
+/* Login button */
+button.suggested-action {
+    background: #cba6f7;
+    color: #1e1e2e;
+    font-family: 'JetBrainsMono Nerd Font Bold', monospace;
+    font-size: 13pt;
+    font-weight: 800;
+    border-radius: 14px;
+    padding: 10px 28px;
+    border: none;
+    margin-top: 14px;
+    box-shadow: 0 4px 16px rgba(203, 166, 247, 0.4);
+}
+
+button.suggested-action:hover {
+    background: #b4befe;
+    box-shadow: 0 6px 22px rgba(180, 190, 254, 0.55);
+}
+
+/* Bottom power/reboot toolbar */
+window > overlay > box > box:last-child {
+    background: rgba(30, 30, 46, 0.72);
+    border: 1.5px solid rgba(203, 166, 247, 0.35);
+    border-radius: 18px;
+    padding: 6px 14px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+button.destructive-action {
+    background: transparent;
+    color: #f38ba8;
+    border-radius: 12px;
+    font-size: 11pt;
+    font-weight: 700;
+    padding: 6px 16px;
+    border: none;
+}
+
+button.destructive-action:hover {
+    background: rgba(243, 139, 168, 0.2);
+    color: #f38ba8;
+}

@@ -1,0 +1,25 @@
+# ReGreet Configuration - Catppuccin Mocha Tablet Theme
+# Matches Hyprlock aesthetic for Dell Latitude 7210
+
+[background]
+path = "/usr/share/backgrounds/greetd/wallpaper-blur.png"
+fit = "Cover"
+
+[env]
+
+[GTK]
+application_prefer_dark_theme = true
+font_name = "JetBrainsMono Nerd Font 12"
+cursor_theme_name = "Adwaita"
+cursor_blink = true
+
+[appearance]
+greeting_msg = "  Welcome back, johnny"
+
+[widget.clock]
+format = "%I:%M %p   󰃭  %A, %B %d"
+resolution = "1s"
+
+[commands]
+reboot = [ "systemctl", "reboot" ]
+poweroff = [ "systemctl", "poweroff" ]
