@@ -22,5 +22,8 @@ input type:touchpad {
 default_border none
 default_floating_border none
 
+# Update D-Bus & systemd environment
+exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway
+
 # Execute session wrapper with folio detection
 exec /etc/greetd/greetd-session
