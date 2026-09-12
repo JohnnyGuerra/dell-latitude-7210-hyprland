@@ -11,6 +11,13 @@ input type:touch {
     map_to_output *
 }
 
+# Touchpad configuration (tap-to-click)
+input type:touchpad {
+    tap enabled
+    natural_scroll disabled
+    dwt enabled
+}
+
 # Borderless greeter window
 default_border none
 default_floating_border none
