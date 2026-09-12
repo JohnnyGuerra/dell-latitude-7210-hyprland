@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Tablet-Aware Screen Locker for Dell Latitude 7210 (Hyprlock + On-Screen Keyboard)
+
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | grep -v '\.lock$' | head -n 1 | xargs -r basename)}"
+SIG=$(ls -t "$XDG_RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
+[ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
+
+# Detect if folio physical keyboard is detached (Alps USB 044e)
+KBD_AUTO_PID=""
+if ! grep -qs '044e' /sys/bus/usb/devices/*/idVendor 2>/dev/null; then
+    # Tablet mode: spawn on-screen keyboard if not already running
+    if ! pgrep -f wvkbd-deskintl >/dev/null 2>&1; then
+        wvkbd-deskintl \
+            -L 300 \
+            -H 380 \
+            -R 12 \
+            --alpha 190 \
+            --bg 1e1e2e \
+            --fg 313244 \
+            --fg-sp 45475a \
+            --text cdd6f4 \
+            --text-sp cba6f7 \
+            --press cba6f7 \
+            --text-press 1e1e2e \
+            &
+        KBD_AUTO_PID=$!
+    fi
+fi
+
+# Launch Hyprlock
+hyprlock "$@"
+
+# Clean up auto-spawned keyboard after unlock
+if [ -n "$KBD_AUTO_PID" ] && kill -0 "$KBD_AUTO_PID" 2>/dev/null; then
+    kill "$KBD_AUTO_PID" 2>/dev/null || true
+fi

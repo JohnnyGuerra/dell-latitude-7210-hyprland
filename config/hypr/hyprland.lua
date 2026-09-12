@@ -186,8 +186,7 @@ hl.bind(mainMod .. " + P",      hl.dsp.window.pseudo())
 hl.bind(mainMod .. " + J",      hl.dsp.layout("togglesplit"))
 hl.bind(mainMod .. " + M",      hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/bin/session-exit-prompt"))
 
--- Lock screen, Theme switcher & Omarchy Control Hub
-hl.bind(mainMod .. " + L",           hl.dsp.exec_cmd("hyprlock"))
+hl.bind(mainMod .. " + L",           hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/bin/lock-screen"))
 hl.bind(mainMod .. " + ALT + Space", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/bin/omarchy-menu"))
 hl.bind(mainMod .. " + ALT + T",     hl.dsp.exec_cmd(os.getenv("HOME") .. "/.local/bin/omarchy-theme"))
 hl.bind(mainMod .. " + G",           hl.dsp.exec_cmd("kitty --class lazygit-float -e lazygit"))

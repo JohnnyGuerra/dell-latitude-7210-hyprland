@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Live status for Hyprlock (Battery + WiFi)
+
+# WiFi Status
+SSID=$(nmcli -t -f active,ssid dev wifi 2>/dev/null | grep '^yes:' | cut -d: -f2 | head -n 1)
+WIFI_STR=""
+if [ -n "$SSID" ]; then
+    WIFI_STR="󰖩 $SSID    "
+else
+    WIFI_STR="󰖪 Disconnected    "
+fi
+
+# Battery Status & Icon
+STATUS=$(cat /sys/class/power_supply/BAT0/status 2>/dev/null || echo "Discharging")
+CAP=$(cat /sys/class/power_supply/BAT0/capacity 2>/dev/null || echo "100")
+
+ICON="󰁹"
+if [ "$STATUS" = "Charging" ]; then
+    ICON="󰂄"
+elif [ "$CAP" -le 10 ]; then
+    ICON="󰁺"
+elif [ "$CAP" -le 25 ]; then
+    ICON="󰁻"
+elif [ "$CAP" -le 50 ]; then
+    ICON="󰁽"
+elif [ "$CAP" -le 75 ]; then
+    ICON="󰁿"
+elif [ "$CAP" -le 90 ]; then
+    ICON="󰂁"
+fi
+
+echo "${WIFI_STR}${ICON} ${CAP}%"
