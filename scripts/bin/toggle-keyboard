@@ -6,6 +6,12 @@ export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 
 SIG=$(ls -t "$XDG_RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
 [ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
 
+if [ "$1" = "close" ] || [ "$1" = "off" ]; then
+    killall -9 wvkbd-deskintl 2>/dev/null || true
+    ~/.local/bin/fit-agent-window &
+    exit 0
+fi
+
 if pgrep -f wvkbd-deskintl >/dev/null 2>&1; then
     killall -9 wvkbd-deskintl 2>/dev/null
     ~/.local/bin/fit-agent-window &

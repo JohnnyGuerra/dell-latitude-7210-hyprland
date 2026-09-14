@@ -247,10 +247,10 @@ hl.bind(mainMod .. " + SHIFT + slash", hl.dsp.exec_cmd(os.getenv("HOME") .. "/.l
 ---- WINDOW & WORKSPACE RULES --
 --------------------------------
 hl.layer_rule({
-    name = "wvkbd-blur",
-    match = "wvkbd",
+    name = "wvkbd-lock",
+    match = { namespace = "^(wvkbd)$" },
+    above_lock = 2,
     blur = true,
-    
 })
 
 hl.workspace_rule({
