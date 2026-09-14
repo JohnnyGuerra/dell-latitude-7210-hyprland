@@ -19,7 +19,11 @@ case "$1" in
         $HOME/.local/bin/toggle-keyboard close >/dev/null 2>&1
         ;;
     control-center)
-        swaync-client -t -sw >/dev/null 2>&1
+        if pidof wofi >/dev/null 2>&1; then
+            killall wofi 2>/dev/null || true
+        else
+            swaync-client -t -sw >/dev/null 2>&1
+        fi
         ;;
     switcher)
         $HOME/.local/bin/touch-switcher >/dev/null 2>&1 &

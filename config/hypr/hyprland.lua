@@ -154,13 +154,13 @@ hl.gesture({
     }
 })
 
--- 4-Finger Swipe Down: SwayNC Control Center
+-- 4-Finger Swipe Down: Dismiss Switcher / Control Center
 hl.gesture({
     fingers = 4,
     direction = "down",
     action = {
         finish = function()
-            hl.exec_cmd("swaync-client -t -sw")
+            hl.exec_cmd(os.getenv("HOME") .. "/.local/bin/touch-action control-center")
         end
     }
 })

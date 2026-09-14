@@ -8,6 +8,12 @@ export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-$(ls "$RUNTIME_DIR"/wayland-* 2>/dev/
 SIG=$(ls -t "$RUNTIME_DIR/hypr/" 2>/dev/null | head -n 1)
 [ -n "$SIG" ] && export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
 
+# Toggle: If switcher (wofi) is already open, dismiss it
+if pidof wofi >/dev/null 2>&1; then
+    killall wofi 2>/dev/null || true
+    exit 0
+fi
+
 # Fetch open windows from Hyprland
 WINDOWS=$(python3 - << 'PYEOF'
 import json, subprocess, sys
