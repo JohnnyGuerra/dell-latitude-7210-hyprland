@@ -60,14 +60,44 @@ hl.gesture({
     }
 })
 
--- Animated vertical sliders dropping from top bar buttons
-hl.animation({ leaf = "layers",        enabled = true,  speed = 4,    spring = "easy",         style = "slidevert" })
-hl.animation({ leaf = "layersIn",      enabled = true,  speed = 4,    spring = "easy",         style = "slidevert" })
-hl.animation({ leaf = "layersOut",     enabled = true,  speed = 3,    bezier = "almostLinear", style = "slidevert" })
+-- Gesture-aligned animations:
+hl.animation({ leaf = "specialWorkspace",    enabled = true,  speed = 3.5,  bezier = "easeOutQuint", style = "slidevert" })
+hl.animation({ leaf = "specialWorkspaceIn",  enabled = true,  speed = 3.5,  bezier = "easeOutQuint", style = "slidevert" })
+hl.animation({ leaf = "specialWorkspaceOut", enabled = true,  speed = 2.5,  bezier = "almostLinear", style = "slidevert" })
+
+hl.animation({ leaf = "layers",              enabled = true,  speed = 3.5,  bezier = "easeOutQuint" })
+hl.animation({ leaf = "layersIn",            enabled = true,  speed = 3.5,  bezier = "easeOutQuint", style = "slide bottom" })
+hl.animation({ leaf = "layersOut",           enabled = true,  speed = 2.5,  bezier = "almostLinear", style = "slide bottom" })
+
+hl.layer_rule({
+    name = "wvkbd-touch",
+    match = { namespace = "^(wvkbd)$" },
+    above_lock = 2,
+    blur = true,
+    animation = "slide bottom",
+})
+
+hl.layer_rule({
+    name = "wofi-touch",
+    match = { namespace = "^(wofi)$" },
+    animation = "slide bottom",
+})
+
+hl.layer_rule({
+    name = "swaync-control-center-slide",
+    match = { namespace = "^(swaync-control-center)$" },
+    animation = "slide top",
+})
+
+hl.layer_rule({
+    name = "swaync-notification-slide",
+    match = { namespace = "^(swaync-notification-window)$" },
+    animation = "slide right",
+})
 
 hl.layer_rule({
     name = "slider-popup-anim",
-    match = "slider-popup",
+    match = { namespace = "^(slider-popup)$" },
     animation = "noanim",
     blur = true,
 })
