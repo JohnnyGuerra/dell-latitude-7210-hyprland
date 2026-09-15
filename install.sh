@@ -120,6 +120,13 @@ if [ -f "${HOME}/.config/chrome-flags.conf" ]; then
     cp "${SCRIPT_DIR}/browser/chrome-flags.conf" "${HOME}/.config/chrome-flags.conf"
 fi
 
+# Antigravity web app & icon
+mkdir -p "${HOME}/.local/share/applications" "${HOME}/.local/share/icons/hicolor/512x512/apps"
+cp "${SCRIPT_DIR}/config/applications/antigravity.desktop" "${HOME}/.local/share/applications/" 2>/dev/null || true
+cp "${SCRIPT_DIR}/assets/icons/antigravity.png" "${HOME}/.local/share/icons/hicolor/512x512/apps/" 2>/dev/null || true
+cp "${SCRIPT_DIR}/assets/icons/antigravity.png" "${HOME}/.local/share/icons/antigravity.png" 2>/dev/null || true
+update-desktop-database "${HOME}/.local/share/applications" 2>/dev/null || true
+
 echo -e "${BLUE}[7/7] Hyprland Touch Configuration...${RESET}"
 echo -e "  Review ${SCRIPT_DIR}/hyprland/touch-gestures.lua or touch-gestures.conf to add"
 echo -e "  touchscreen workspace swiping (workspace_swipe_touch = true) and multi-finger gestures."

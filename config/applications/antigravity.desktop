@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Antigravity
+GenericName=AI Coding Assistant
+Comment=Google DeepMind Antigravity Remote Web App
+Exec=google-chrome-stable --ozone-platform-hint=auto --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoDecoder,TouchpadOverscrollHistoryNavigation --enable-gpu-rasterization --enable-zero-copy --app=https://antigravity.google.com
+Icon=antigravity
+Terminal=false
+StartupNotify=true
+StartupWMClass=chrome-antigravity.google.com__-Default
+Categories=Development;IDE;Network;
+Keywords=ai;agent;antigravity;coding;chat;remote;
